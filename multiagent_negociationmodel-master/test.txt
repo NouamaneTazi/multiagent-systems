@@ -1,0 +1,1 @@
+[arg for arg in arguments_for_dict[item.get_name()] if arg !=argument]
