@@ -58,17 +58,51 @@ class ArgumentAgent(CommunicatingAgent):
         else:
             for message in messages:
                 if message.get_performative() == MessagePerformative.ACCEPT:
-                    self.logger.info(
-                        "Item accepted: " + message.get_content()[0].get_name()
-                    )
+                    self.handle_accept(message)
                 elif message.get_performative() == MessagePerformative.PROPOSE:
-                    item = message.get_content()[0]
-                    message = self.handle_propose(message)
-                    self.send_message(message)
+                    self.handle_propose(message)
+                elif message.get_performative() == MessagePerformative.ASK_WHY:
+                    pass
+                elif message.get_performative() == MessagePerformative.COMMIT:
+                    self.handle_commit(message)
                 else:
                     self.logger.warning(
                         f"Unknown message received: {message.get_performative()}"
                     )
+
+    def handle_commit(self, message):
+        item = message.get_content()[0]
+        target_name = message.get_exp()
+        commit = Message(
+            self.get_name(),
+            target_name,
+            MessagePerformative.COMMIT,
+            [item],
+        )
+        self.logger.info(
+            f"Received COMMIT message from {message.get_exp()}. Committing {item.get_name()}"
+        )
+        self.send_message(commit)
+
+    def handle_accept(self, message):
+        item = message.get_content()[0]
+        if item in self.preferences.get_item_list():
+            target_name = message.get_exp()
+            commit = Message(
+                self.get_name(),
+                target_name,
+                MessagePerformative.COMMIT,
+                [item],
+            )
+            self.logger.info(
+                f"Received ACCEPT message from {message.get_exp()}. Committing {item.get_name()}"
+            )
+            self.send_message(commit)
+        else:
+            self.logger.info(
+                f"Received ACCEPT message from {message.get_exp()} but {item.get_name()} is not among preferences"
+            )
+            # TODO: what should we do next?
 
     def handle_propose(self, message):
         """Accepts proposal if item is among top 10 preferred items, otherwise asks why."""
@@ -93,7 +127,7 @@ class ArgumentAgent(CommunicatingAgent):
                 [item],
             )
             self.logger.info(f"Asking why {item.get_name()} from {message.get_exp()}")
-        return message
+        self.send_message(message)
 
     def get_random_target(self):
         return self.random.choice(
