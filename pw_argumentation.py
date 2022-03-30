@@ -63,22 +63,37 @@ class ArgumentAgent(CommunicatingAgent):
                     )
                 elif message.get_performative() == MessagePerformative.PROPOSE:
                     item = message.get_content()[0]
-                    # accept proposal
-                    target = self.get_random_target()
-                    accept = Message(
-                        self.get_name(),
-                        target.get_name(),
-                        MessagePerformative.ACCEPT,
-                        [message.get_content()[0]],
-                    )
-                    self.logger.info(
-                        f"Accepting proposal {item.get_name()} from {message.get_exp()}"
-                    )
-                    self.send_message(accept)
+                    message = self.handle_propose(message)
+                    self.send_message(message)
                 else:
                     self.logger.warning(
-                        "Unknown message received: " + message.get_performative()
+                        f"Unknown message received: {message.get_performative()}"
                     )
+
+    def handle_propose(self, message):
+        """Accepts proposal if item is among top 10 preferred items, otherwise asks why."""
+        target_name = message.get_exp()
+        item = message.get_content()[0]
+        # TODO: must be set to 10
+        if self.preferences.is_item_among_top_x_percent(item, 50):
+            message = Message(
+                self.get_name(),
+                target_name,
+                MessagePerformative.ACCEPT,
+                [item],
+            )
+            self.logger.info(
+                f"Accepting proposal {item.get_name()} from {message.get_exp()}"
+            )
+        else:
+            message = Message(
+                self.get_name(),
+                target_name,
+                MessagePerformative.ASK_WHY,
+                [item],
+            )
+            self.logger.info(f"Asking why {item.get_name()} from {message.get_exp()}")
+        return message
 
     def get_random_target(self):
         return self.random.choice(

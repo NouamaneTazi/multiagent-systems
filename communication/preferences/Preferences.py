@@ -88,11 +88,23 @@ class Preferences:
 
         :return: a boolean, True means that the item is among the favourite ones
         """
-        assert len(list_items) > 0 and item in list_items
+        return self.is_item_among_top_x_percent(item, 10, list_items)
+
+    def is_item_among_top_x_percent(self, item, x, list_items=None):
+        """
+        Return whether a given item is among the top x percent of the preferred items.
+
+        :return: a boolean, True means that the item is among the favourite ones
+        """
+        if list_items is None:
+            list_items = self.__item_list
+        assert (
+            len(list_items) > 0 and item in list_items
+        ), f"{item} is not in {list_items}"
         scores = [item.get_score(self) for item in list_items]
         scores.sort(reverse=True)
-        top_10_percent = scores[: int(len(scores) * 0.1)]
-        return item.get_score(self) in top_10_percent
+        top_x_percent = scores[: int(len(scores) * x / 100)]
+        return item.get_score(self) in top_x_percent
 
 
 if __name__ == "__main__":
