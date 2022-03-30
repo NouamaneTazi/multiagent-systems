@@ -13,12 +13,14 @@ class Preferences:
     attr:
         criterion_name_list: the list of criterion name (ordered by importance)
         criterion_value_list: the list of criterion value
+        item_list: the list of items
     """
 
     def __init__(self):
         """Creates a new Preferences object."""
         self.__criterion_name_list = []
         self.__criterion_value_list = []
+        self.__item_list = []
 
     def get_criterion_name_list(self):
         """Returns the list of criterion name."""
@@ -28,12 +30,19 @@ class Preferences:
         """Returns the list of criterion value."""
         return self.__criterion_value_list
 
+    def get_item_list(self):
+        """Returns the list of items."""
+        return self.__item_list
+
     def set_criterion_name_list(self, criterion_name_list):
-        """Sets the list of criterion name."""
+        """Sets the list of criterion name (ordered by importance)."""
         self.__criterion_name_list = criterion_name_list
 
     def add_criterion_value(self, criterion_value):
         """Adds a criterion value in the list."""
+        item = criterion_value.get_item()
+        if item not in self.__item_list:
+            self.__item_list.append(item)
         self.__criterion_value_list.append(criterion_value)
 
     def get_value(self, item, criterion_name):
@@ -58,10 +67,13 @@ class Preferences:
         """Returns if the item 1 is preferred to the item 2."""
         return item_1.get_score(self) > item_2.get_score(self)
 
-    def most_preferred(self, item_list):
-        """Returns the most preferred item from a list."""
+    def most_preferred(self, item_list=None):
+        """Returns the most preferred item from a list. If no list is given, the list of items known by agent is used."""
         if not item_list or len(item_list) == 0:
-            return None
+            if len(self.__item_list) == 0:
+                return None
+            else:
+                item_list = self.__item_list
         best_item = item_list[0]
         for item in item_list:
             if self.is_preferred_item(
