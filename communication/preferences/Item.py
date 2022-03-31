@@ -19,6 +19,10 @@ class Item:
         """Returns Item as a String."""
         return self.__name + " (" + self.__description + ")"
 
+    def __repr__(self):
+        """Returns Item as a String."""
+        return self.__name
+
     def __eq__(self, o):
         """Return True if Items are equal."""
         return self.__name == o.__name and self.__description == o.__description

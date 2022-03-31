@@ -22,6 +22,12 @@ class Preferences:
         self.__criterion_value_list = []
         self.__item_list = []
 
+    def __str__(self):
+        """Returns a string representation of the preferences."""
+        return (
+            f"\n* Items: {self.__item_list}\n* Criteria: {self.__criterion_name_list}"
+        )
+
     def get_criterion_name_list(self):
         """Returns the list of criterion name."""
         return self.__criterion_name_list
@@ -105,6 +111,13 @@ class Preferences:
         scores.sort(reverse=True)
         top_x_percent = scores[: int(len(scores) * x / 100)]
         return item.get_score(self) in top_x_percent
+
+    def remove_item(self, item):
+        """Removes an item from the list of items and the related criteria."""
+        self.__item_list.remove(item)
+        for criterion_value in self.__criterion_value_list:
+            if criterion_value.get_item() == item:
+                self.__criterion_value_list.remove(criterion_value)
 
 
 if __name__ == "__main__":

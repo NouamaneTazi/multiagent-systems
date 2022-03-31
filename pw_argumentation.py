@@ -1,5 +1,5 @@
 from mesa import Model
-from mesa.time import RandomActivation
+from mesa.time import RandomActivation, BaseScheduler
 
 
 from communication.agent.CommunicatingAgent import CommunicatingAgent
@@ -33,7 +33,7 @@ class ArgumentAgent(CommunicatingAgent):
     def _init_logger(name):
         logger = logging.getLogger(name)
         console = logging.StreamHandler()
-        console.setLevel(logging.INFO)
+        console.setLevel(logging.DEBUG)
         formatter = logging.Formatter(
             "%(asctime)s - %(levelname)s - %(name)s >> %(message)s"
         )
@@ -61,8 +61,6 @@ class ArgumentAgent(CommunicatingAgent):
                     self.handle_accept(message)
                 elif message.get_performative() == MessagePerformative.PROPOSE:
                     self.handle_propose(message)
-                elif message.get_performative() == MessagePerformative.ASK_WHY:
-                    pass
                 elif message.get_performative() == MessagePerformative.COMMIT:
                     self.handle_commit(message)
                 else:
@@ -73,7 +71,7 @@ class ArgumentAgent(CommunicatingAgent):
     def handle_commit(self, message):
         item = message.get_content()[0]
         target_name = message.get_exp()
-        commit = Message(
+        message = Message(
             self.get_name(),
             target_name,
             MessagePerformative.COMMIT,
@@ -82,13 +80,17 @@ class ArgumentAgent(CommunicatingAgent):
         self.logger.info(
             f"Received COMMIT message from {message.get_exp()}. Committing {item.get_name()}"
         )
-        self.send_message(commit)
+        self.send_message(message)
+        self.preferences.remove_item(item)
+        self.logger.debug(
+            f"Removed {item.get_name()} from preferences. New preferences: {self.preferences}"
+        )
 
     def handle_accept(self, message):
         item = message.get_content()[0]
         if item in self.preferences.get_item_list():
             target_name = message.get_exp()
-            commit = Message(
+            message = Message(
                 self.get_name(),
                 target_name,
                 MessagePerformative.COMMIT,
@@ -97,12 +99,23 @@ class ArgumentAgent(CommunicatingAgent):
             self.logger.info(
                 f"Received ACCEPT message from {message.get_exp()}. Committing {item.get_name()}"
             )
-            self.send_message(commit)
-        else:
-            self.logger.info(
-                f"Received ACCEPT message from {message.get_exp()} but {item.get_name()} is not among preferences"
+            self.send_message(message)
+            self.preferences.remove_item(item)
+            self.logger.debug(
+                f"Removed {item.get_name()} from preferences. New preferences: {self.preferences}"
             )
-            # TODO: what should we do next?
+        else:
+            target_name = message.get_exp()
+            message = Message(
+                self.get_name(),
+                target_name,
+                MessagePerformative.ARGUE,
+                [item],
+            )
+            self.logger.info(
+                f"Received ACCEPT message from {message.get_exp()} but {item.get_name()} is not among preferences. Starts arguing."
+            )
+            self.send_message(message)
 
     def handle_propose(self, message):
         """Accepts proposal if item is among top 10 preferred items, otherwise asks why."""
@@ -179,7 +192,7 @@ class ArgumentModel(Model):
     """ArgumentModel which inherit from Model."""
 
     def __init__(self):
-        self.schedule = RandomActivation(self)
+        self.schedule = BaseScheduler(self)  # RandomActivation(self)
         self.__messages_service = MessageService(self.schedule)
 
         # To be completed
