@@ -11,7 +11,12 @@ class Comparison:
     """
 
     def __init__(self, best_criterion_name, worst_criterion_name):
-        """Creates a new comparison.
-        """
+        """Creates a new comparison."""
         self.__best_criterion_name = best_criterion_name
         self.__worst_criterion_name = worst_criterion_name
+
+    def get_worst_criterion_name(self):
+        return self.__worst_criterion_name
+
+    def get_best_criterion_name(self):
+        return self.__best_criterion_name

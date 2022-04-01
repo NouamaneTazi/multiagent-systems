@@ -8,7 +8,7 @@ from communication.preferences.Value import Value
 from communication.preferences.Preferences import Preferences
 
 
-class TestStringMethods(unittest.TestCase):
+class TestPreferences(unittest.TestCase):
     def setUp(self):
         agent_pref = Preferences()
         agent_pref.set_criterion_name_list(

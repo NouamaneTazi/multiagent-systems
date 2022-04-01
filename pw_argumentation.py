@@ -187,6 +187,60 @@ class ArgumentAgent(CommunicatingAgent):
 
         self.preferences = agent_pref
 
+    def List_supporting_proposal(self, item):
+        """Generate a list of arguments which can be used to support an item
+        :param item: Item - name of the item
+        :return: list of all arguments PRO an item (sorted by order of importance based on agent's preferences)
+        """
+        arg_list = []
+
+        # iterate through all criteria (ordered by importance)
+        criterion_name_list = self.preferences.get_criterion_name_list()
+        for i, crit_name in enumerate(criterion_name_list):
+            value = self.preferences.get_value(item, crit_name)
+            if value in [Value.VERY_GOOD, Value.GOOD]:
+                # add arg of type ARGUE(E <= Environment Impact=Very Good)
+                arg = Argument(True, item)
+                arg.add_premise_couple_values(crit_name, value)
+                arg_list.append(arg)
+
+                # iterate through the less important criteria
+                if i < len(criterion_name_list) - 1:
+                    for worst_crit_name in criterion_name_list[i + 1 :]:
+                        # add arg of type ARGUE(E <= Noise=Very Good, Noise > Cost)
+                        arg = Argument(True, item)
+                        arg.add_premise_couple_values(crit_name, value)
+                        arg.add_premise_comparison(crit_name, worst_crit_name)
+                        arg_list.append(arg)
+        return arg_list
+
+    def List_attacking_proposal(self, item):
+        """Generate a list of arguments which can be used to attack an item
+        :param item: Item - name of the item
+        :return: list of all arguments CON an item (sorted by order of importance based on preferences)
+        """
+        arg_list = []
+
+        # iterate through all criteria (ordered by importance)
+        criterion_name_list = self.preferences.get_criterion_name_list()
+        for i, crit_name in enumerate(criterion_name_list):
+            value = self.preferences.get_value(item, crit_name)
+            if value in [Value.VERY_BAD, Value.BAD]:
+                # add arg of type ARGUE(not E <= Environment Impact=Very Bad)
+                arg = Argument(False, item)
+                arg.add_premise_couple_values(crit_name, value)
+                arg_list.append(arg)
+
+                # iterate through the less important criteria
+                if i < len(criterion_name_list) - 1:
+                    for worst_crit_name in criterion_name_list[i + 1 :]:
+                        # add arg of type ARGUE(not E <= Noise=Very Bad, Noise > Cost)
+                        arg = Argument(False, item)
+                        arg.add_premise_couple_values(crit_name, value)
+                        arg.add_premise_comparison(crit_name, worst_crit_name)
+                        arg_list.append(arg)
+        return arg_list
+
 
 class ArgumentModel(Model):
     """ArgumentModel which inherit from Model."""
