@@ -15,6 +15,10 @@ class CoupleValue:
         self.__criterion_name = criterion_name
         self.__value = value
 
+    def __str__(self):
+        """Returns a string representation of the couple value."""
+        return f"{self.__criterion_name.name}={self.__value.name}"
+
     def get_criterion_name(self):
         return self.__criterion_name
 

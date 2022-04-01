@@ -22,6 +22,10 @@ class Argument:
         self.__comparison_list = []
         self.__couple_values_list = []
 
+    def __str__(self):
+        """Returns a string representation of the argument."""
+        return f"{'not' if not self.__decision else ''} {self.__item}, {' and '.join(map(str, self.__comparison_list + self.__couple_values_list))}"
+
     def add_premise_comparison(self, criterion_name_1, criterion_name_2):
         """Adds a premise comparison in the comparison list."""
         self.__comparison_list.append(Comparison(criterion_name_1, criterion_name_2))

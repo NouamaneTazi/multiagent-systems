@@ -24,9 +24,7 @@ class Preferences:
 
     def __str__(self):
         """Returns a string representation of the preferences."""
-        return (
-            f"\n* Items: {self.__item_list}\n* Criteria: {self.__criterion_name_list}"
-        )
+        return f"\n* Items: {self.__item_list}\n* Criteria: {[c.name for c in self.__criterion_name_list]}"
 
     def get_criterion_name_list(self):
         """Returns the list of criterion name."""

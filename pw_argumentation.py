@@ -63,10 +63,29 @@ class ArgumentAgent(CommunicatingAgent):
                     self.handle_propose(message)
                 elif message.get_performative() == MessagePerformative.COMMIT:
                     self.handle_commit(message)
+                # elif message.get_performative() == MessagePerformative.ARGUE:
+                #     self.handle_argue(message)
+                elif message.get_performative() == MessagePerformative.ASK_WHY:
+                    self.handle_ask_why(message)
                 else:
                     self.logger.warning(
                         f"Unknown message received: {message.get_performative()}"
                     )
+
+    def handle_ask_why(self, message):
+        item = message.get_content()[0]
+        target_name = message.get_exp()
+        argument = self.support_proposal(item)
+        message = Message(
+            self.get_name(),
+            target_name,
+            MessagePerformative.ARGUE,
+            [item, argument],
+        )
+        self.logger.info(
+            f"Received ASK_WHY message from {target_name}. Giving argument:{argument}"
+        )
+        self.send_message(message)
 
     def handle_commit(self, message):
         item = message.get_content()[0]
@@ -78,7 +97,7 @@ class ArgumentAgent(CommunicatingAgent):
             [item],
         )
         self.logger.info(
-            f"Received COMMIT message from {message.get_exp()}. Committing {item.get_name()}"
+            f"Received COMMIT message from {target_name}. Committing {item.get_name()}"
         )
         self.send_message(message)
         self.preferences.remove_item(item)
@@ -97,7 +116,7 @@ class ArgumentAgent(CommunicatingAgent):
                 [item],
             )
             self.logger.info(
-                f"Received ACCEPT message from {message.get_exp()}. Committing {item.get_name()}"
+                f"Received ACCEPT message from {target_name}. Committing {item.get_name()}"
             )
             self.send_message(message)
             self.preferences.remove_item(item)
@@ -113,7 +132,7 @@ class ArgumentAgent(CommunicatingAgent):
                 [item],
             )
             self.logger.info(
-                f"Received ACCEPT message from {message.get_exp()} but {item.get_name()} is not among preferences. Starts arguing."
+                f"Received ACCEPT message from {target_name} but {item.get_name()} is not among preferences. Starts arguing."
             )
             self.send_message(message)
 
@@ -129,9 +148,7 @@ class ArgumentAgent(CommunicatingAgent):
                 MessagePerformative.ACCEPT,
                 [item],
             )
-            self.logger.info(
-                f"Accepting proposal {item.get_name()} from {message.get_exp()}"
-            )
+            self.logger.info(f"Accepting proposal {item.get_name()} from {target_name}")
         else:
             message = Message(
                 self.get_name(),
@@ -139,7 +156,7 @@ class ArgumentAgent(CommunicatingAgent):
                 MessagePerformative.ASK_WHY,
                 [item],
             )
-            self.logger.info(f"Asking why {item.get_name()} from {message.get_exp()}")
+            self.logger.info(f"Asking why {item.get_name()} from {target_name}")
         self.send_message(message)
 
     def get_random_target(self):
@@ -240,6 +257,19 @@ class ArgumentAgent(CommunicatingAgent):
                         arg.add_premise_comparison(crit_name, worst_crit_name)
                         arg_list.append(arg)
         return arg_list
+
+    def support_proposal(self, item):
+        """Used when the agent receives " ASK_WHY " after having proposed an item
+        :param item: str - name of the item which was proposed
+        :return: string - the strongest supportive argument
+        """
+        arg_list = self.List_supporting_proposal(item)
+        if len(arg_list) == 0:
+            self.logger.warning(
+                f"Agent {self.get_name()} received ASK_WHY message but has no arguments to support {item}"
+            )
+            return None
+        return arg_list[0]
 
 
 class ArgumentModel(Model):
