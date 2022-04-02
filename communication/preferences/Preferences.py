@@ -62,6 +62,10 @@ class Preferences:
                 and value.get_criterion_name() == criterion_name
             ):
                 return value.get_value()
+
+        raise Exception(
+            f"No value found for item {item} and criterion {criterion_name}"
+        )
         return None
 
     def is_preferred_criterion(self, criterion_name_1, criterion_name_2):
@@ -77,7 +81,7 @@ class Preferences:
         return [
             c
             for c in self.__criterion_name_list
-            if self.is_preferred_criterion(criterion, c) and c != criterion
+            if self.is_preferred_criterion(c, criterion) and c != criterion
         ]
 
     def is_preferred_item(self, item_1, item_2, criterion=None):

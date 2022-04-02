@@ -73,19 +73,21 @@ class MessageService:
         performative = message.get_performative()
         content = message.get_content()
         item = content[0]
-        x, main_criterion, secondary_criterion = None, None, None
+        decision, x, main_criterion, secondary_criterion = None, None, None, None
 
         if performative == MessagePerformative.ARGUE:
             argument = content[1]
             item, decision = argument.get_conclusion()
             main_criterion, secondary_criterion = argument.get_comparison()
             main_criterion, x = argument.get_couple_value()
+            decision = "pro" if decision else "con"
 
         history = {
             "sender": sender,
             "receiver": receiver,
             "performative": performative,
             "item": item,
+            "decision": decision,
             "main_criterion": main_criterion,
             "value": x,
             "secondary_criterion": secondary_criterion,
