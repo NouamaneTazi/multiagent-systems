@@ -26,17 +26,13 @@ import colorama
 from collections import defaultdict
 
 
-class TestArgumentModel(Model):
+class ArgumentModelTester(Model):
     """ArgumentModel which inherit from Model."""
 
-    def __init__(self):
+    def __init__(self, agents_prefs):
         self.schedule = BaseScheduler(self)  # RandomActivation(self)
         self.__messages_service = MessageService(self.schedule)
 
-        list_items = [
-            Item("Diesel Engine", "A super cool diesel engine"),
-            Item("Electric Engine", "A very quiet engine"),
-        ]
         available_colors = [
             colorama.Fore.YELLOW,
             colorama.Fore.BLUE,
@@ -47,16 +43,15 @@ class TestArgumentModel(Model):
             colorama.Fore.GREEN,
         ]
 
-        for i, agent_name in enumerate(["Bob", "Alice"]):
-            a = ArgumentAgent(i, self, agent_name, Preferences(), available_colors[i])
-            a.generate_preferences(list_items)
+        for i, preferences in enumerate(agents_prefs):
+            a = ArgumentAgent(i, self, f"A{i+1}", preferences, available_colors[i])
             self.schedule.add(a)
 
         self.running = True
         self.step_count = 0
 
     def step(self):
-        self.__messages_service.dispatch_messages()
+        self.__messages_service.dispatch_messages()  # only needed if instant delivery is False
         self.schedule.step()
         self.step_count += 1
         if self.step_count == 4:
@@ -67,17 +62,55 @@ class TestArgumentModel(Model):
         return pd.DataFrame(history)
 
 
-class TestArgumentation(unittest.TestCase):
-    def setUp(self):
-        colorama.init()  # INFO: used to print colored text on Windows
-        logging.basicConfig(level=logging.DEBUG)
-        logging.root.handlers = []
+values_list = [
+    Value.VERY_GOOD,
+    Value.GOOD,
+    Value.AVERAGE,
+    Value.BAD,
+    Value.VERY_BAD,
+]
 
-    def test_perf_get_value(self):
-        """test get_value performance method"""
-        argument_model = TestArgumentModel()
-        argument_model.run_model()
+
+class TestArgumentation(unittest.TestCase):
+    def test_scenario_1(self):
+        """test scenario
+        A1 to A2: propose(item)
+        A2 to A1: accept (item)
+        A1 to A2: commit (item)
+        A2 to A1: commit (item)
+        """
+        agents_prefs = []  # list of agents agents_prefs
+
+        # Agent1
+        list_items = [
+            Item("item1", ""),
+            Item("item2", ""),
+        ]
+        list_criteria = [
+            CriterionName.PRODUCTION_COST,
+        ]
+        criteria_values = [
+            CriterionValue(list_items[0], list_criteria[0], values_list[0]),
+            CriterionValue(list_items[1], list_criteria[0], values_list[4]),
+        ]
+
+        agents_prefs.append(Preferences(list_criteria, criteria_values))
+
+        # Agent2
+        agents_prefs.append(Preferences(list_criteria, criteria_values))
+
+        argument_model = ArgumentModelTester(agents_prefs)
+        argument_model.step()
+        argument_model.step()
+        history = argument_model.get_message_history()
+        self.assertEqual(history.iloc[0].performative, MessagePerformative.PROPOSE)
+        self.assertEqual(history.iloc[1].performative, MessagePerformative.ACCEPT)
+        self.assertEqual(history.iloc[2].performative, MessagePerformative.COMMIT)
+        self.assertEqual(history.iloc[3].performative, MessagePerformative.COMMIT)
 
 
 if __name__ == "__main__":
+    colorama.init()  # INFO: used to print colored text on Windows
+    logging.basicConfig(level=logging.DEBUG)
+    logging.root.handlers = []
     unittest.main()

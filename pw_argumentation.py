@@ -30,7 +30,7 @@ class ArgumentAgent(CommunicatingAgent):
 
     def __init__(self, unique_id, model, name, preferences, log_color):
         super().__init__(unique_id, model, name)
-        self.preferences = None
+        self.preferences = preferences
         self.logger = self._init_logger(name, log_color)
 
     @staticmethod
@@ -47,7 +47,7 @@ class ArgumentAgent(CommunicatingAgent):
         return logger
 
     def step(self):
-        super().step()
+        super().step()  # TODO: check if this is needed
         messages = self.get_new_messages()
         if len(messages) == 0:
             # propose item
@@ -220,7 +220,7 @@ class ArgumentAgent(CommunicatingAgent):
     def get_preference(self):
         return self.preferences
 
-    def generate_preferences(self, list_items):
+    def generate_random_preferences(self, list_items):
 
         list_criteria = [
             CriterionName.PRODUCTION_COST,
@@ -252,6 +252,9 @@ class ArgumentAgent(CommunicatingAgent):
                 )
 
         self.preferences = agent_pref
+
+    def import_preferences(self, preferences):
+        self.preferences = preferences
 
     def List_supporting_proposal(self, item):
         """Generate a list of arguments which can be used to support an item
@@ -436,7 +439,7 @@ class ArgumentModel(Model):
 
         for i, agent_name in enumerate(["Bob", "Alice"]):
             a = ArgumentAgent(i, self, agent_name, Preferences(), available_colors[i])
-            a.generate_preferences(list_items)
+            a.generate_random_preferences(list_items)
             self.schedule.add(a)
 
         self.running = True

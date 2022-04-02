@@ -16,11 +16,16 @@ class Preferences:
         item_list: the list of items
     """
 
-    def __init__(self):
+    def __init__(self, list_criteria=None, criteria_values=None):
         """Creates a new Preferences object."""
         self.__criterion_name_list = []
         self.__criterion_value_list = []
         self.__item_list = []
+        if list_criteria:
+            self.set_criterion_name_list(list_criteria)  # tells criterion importance
+        if criteria_values:
+            for critvalue in criteria_values:
+                self.add_criterion_value(critvalue)
 
     def __str__(self):
         """Returns a string representation of the preferences."""
