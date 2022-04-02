@@ -63,8 +63,8 @@ class ArgumentAgent(CommunicatingAgent):
                     self.handle_propose(message)
                 elif message.get_performative() == MessagePerformative.COMMIT:
                     self.handle_commit(message)
-                # elif message.get_performative() == MessagePerformative.ARGUE:
-                #     self.handle_argue(message)
+                elif message.get_performative() == MessagePerformative.ARGUE:
+                    self.handle_argue(message)
                 elif message.get_performative() == MessagePerformative.ASK_WHY:
                     self.handle_ask_why(message)
                 else:
@@ -72,20 +72,62 @@ class ArgumentAgent(CommunicatingAgent):
                         f"Unknown message received: {message.get_performative()}"
                     )
 
+    def handle_argue(self, message):
+        item = message.get_content()[0]
+        target_name = message.get_exp()
+        argument = message.get_content()[1]
+        counter_argument = self.get_counter_argument(argument)
+        if counter_argument:
+            message = Message(
+                self.get_name(),
+                target_name,
+                MessagePerformative.ARGUE,
+                [item, counter_argument],
+            )
+            self.logger.info(
+                f"Received argument from {target_name}. Sending counter argument: {counter_argument}"
+            )
+            self.send_message(message)
+
+        else:  # accept proposal
+            message = Message(
+                self.get_name(),
+                target_name,
+                MessagePerformative.ACCEPT,
+                [item],
+            )
+            self.logger.info(
+                f"Accepting proposal {item.get_name()} from {target_name} because no counter argument"
+            )
+            self.send_message(message)
+
     def handle_ask_why(self, message):
         item = message.get_content()[0]
         target_name = message.get_exp()
-        argument = self.support_proposal(item)
-        message = Message(
-            self.get_name(),
-            target_name,
-            MessagePerformative.ARGUE,
-            [item, argument],
-        )
-        self.logger.info(
-            f"Received ASK_WHY message from {target_name}. Giving argument:{argument}"
-        )
-        self.send_message(message)
+        argument = self.support_proposal(item)  # TODO: case where no supporting args
+        if argument:
+            message = Message(
+                self.get_name(),
+                target_name,
+                MessagePerformative.ARGUE,
+                [item, argument],
+            )
+            self.logger.info(
+                f"Received ASK_WHY message from {target_name}. Giving argument:{argument}"
+            )
+            self.send_message(message)
+        else:
+            # propose another item
+            other_items = self.preferences.get_item_list()
+            other_items.remove(item)
+            item = self.preferences.most_preferred(other_items)
+            proposal = Message(
+                self.get_name(), target_name, MessagePerformative.PROPOSE, [item]
+            )
+            self.logger.info(
+                f"No args for previous item. Proposing new item: {item.get_name()} to {target_name}"
+            )
+            self.send_message(proposal)
 
     def handle_commit(self, message):
         item = message.get_content()[0]
@@ -140,15 +182,17 @@ class ArgumentAgent(CommunicatingAgent):
         """Accepts proposal if item is among top 10 preferred items, otherwise asks why."""
         target_name = message.get_exp()
         item = message.get_content()[0]
-        # TODO: must be set to 10
-        if self.preferences.is_item_among_top_x_percent(item, 50):
+        PERCENT = 50  # TODO: must be set to 10
+        if self.preferences.is_item_among_top_x_percent(item, PERCENT):
             message = Message(
                 self.get_name(),
                 target_name,
                 MessagePerformative.ACCEPT,
                 [item],
             )
-            self.logger.info(f"Accepting proposal {item.get_name()} from {target_name}")
+            self.logger.info(
+                f"Accepting proposal {item.get_name()} from {target_name} because it is among top {PERCENT}%"
+            )
         else:
             message = Message(
                 self.get_name(),
@@ -265,11 +309,63 @@ class ArgumentAgent(CommunicatingAgent):
         """
         arg_list = self.List_supporting_proposal(item)
         if len(arg_list) == 0:
-            self.logger.warning(
+            self.logger.debug(
                 f"Agent {self.get_name()} received ASK_WHY message but has no arguments to support {item}"
             )
             return None
         return arg_list[0]
+
+    # def argument_parsing(self, argument): #INFO: judged not necessary
+    #     """Parses an argument and returns its premises and its conclusion"""
+    #     return [argument.get_decision(), argument.get_premises()]
+
+    def get_counter_argument(self, argument):
+        """Returns a counter argument such as:
+        1. the agent has a better alternative on the same criterion or a more important criterion
+        2. the agent thinks badly of this item on the same or a more important criterion
+        """
+        item, decision = argument.get_conclusion()
+        criterion, prev_worst_criterion = argument.get_comparison()
+        criterion, x = argument.get_couple_value()
+
+        if decision == True:  # PRO argument
+            # iterate through better criteria (assume agents have same criteria)
+            for better_criterion in self.preferences.get_preferred_criteria(criterion):
+                if (
+                    prev_worst_criterion != better_criterion
+                ):  # TODO try to avoid loop by giving the same previously rejected criterion
+                    # has bad evaluation on more important criterion
+                    y = self.preferences.get_value(item, better_criterion)
+                    if y in [
+                        Value.VERY_BAD,
+                        Value.BAD,
+                    ]:  # TODO: could be replaced with y > x
+                        arg = Argument(False, item)
+                        arg.add_premise_couple_values(better_criterion, y)
+                        arg.add_premise_comparison(better_criterion, criterion)
+                        # argue(not oi, cj = y with y is worst than x, cj > ci)
+                        return arg
+
+            # check for better alternative on same criterion
+            for alternative in self.preferences.get_item_list():
+                y = self.preferences.get_value(alternative, criterion)
+                if alternative != item and y and y.value > x.value:
+                    arg = Argument(False, item)
+                    arg.add_premise_couple_values(criterion, y)
+                    return arg  # argue(oj , ci = y, y is better than x)
+
+            # check for bad evaluation on same criterion
+            if self.preferences.get_value(item, criterion) in [
+                Value.VERY_BAD,
+                Value.BAD,
+            ]:
+                arg = Argument(False, item)
+                arg.add_premise_couple_values(
+                    criterion, self.preferences.get_value(item, criterion)
+                )
+                return arg  #  argue(not oi, ci = y, y is worst than x)
+        else:  # CON argument
+            pass
 
 
 class ArgumentModel(Model):

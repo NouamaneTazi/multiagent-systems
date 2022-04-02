@@ -67,8 +67,18 @@ class Preferences:
             if criterion_name == criterion_name_2:
                 return False
 
-    def is_preferred_item(self, item_1, item_2):
+    def get_preferred_criteria(self, criterion):
+        """Returns the list of preferred criteria then criterion (excluding input criterion)."""
+        return [
+            c
+            for c in self.__criterion_name_list
+            if self.is_preferred_criterion(criterion, c) and c != criterion
+        ]
+
+    def is_preferred_item(self, item_1, item_2, criterion=None):
         """Returns if the item 1 is preferred to the item 2."""
+        if criterion:
+            return self.get_value(item_1, criterion) > self.get_value(item_2, criterion)
         return item_1.get_score(self) > item_2.get_score(self)
 
     def most_preferred(self, item_list=None):

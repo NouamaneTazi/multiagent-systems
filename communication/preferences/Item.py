@@ -25,7 +25,12 @@ class Item:
 
     def __eq__(self, o):
         """Return True if Items are equal."""
-        return self.__name == o.__name and self.__description == o.__description
+        if isinstance(o, Item):
+            return self.__name == o.__name
+        elif isinstance(o, str):
+            return self.__name == o
+        else:
+            return False
 
     def get_name(self):
         """Returns the name of the item."""
