@@ -32,6 +32,7 @@ class ArgumentAgent(CommunicatingAgent):
         super().__init__(unique_id, model, name)
         self.preferences = preferences
         self.logger = self._init_logger(name, log_color)
+        self.done_negotiating = False
 
     @staticmethod
     def _init_logger(name, log_color):
@@ -66,6 +67,7 @@ class ArgumentAgent(CommunicatingAgent):
                 self.send_message(proposal)
             else:
                 self.logger.info("No messages received. No items to propose.")
+                self.done_negotiating = True
         else:
             for message in messages:
                 if message.get_performative() == MessagePerformative.ACCEPT:
@@ -131,7 +133,7 @@ class ArgumentAgent(CommunicatingAgent):
             self.send_message(message)
         else:
             # propose another item
-            other_items = self.preferences.get_item_list()
+            other_items = self.preferences.get_item_list().copy()
             other_items.remove(item)
             item = self.preferences.most_preferred(other_items)
             if item:
@@ -146,6 +148,7 @@ class ArgumentAgent(CommunicatingAgent):
                 self.logger.info(
                     " No args for previous item. No more items to propose."
                 )
+                self.done_negotiating = True
 
     def handle_commit(self, message):
         item = message.get_content()[0]
@@ -336,6 +339,12 @@ class ArgumentAgent(CommunicatingAgent):
         criterion, prev_worst_criterion = argument.get_comparison()
         criterion, x = argument.get_couple_value()
 
+        if criterion not in self.preferences.get_criterion_name_list():
+            self.logger.debug(
+                f"Received an argument with a criterion not in the agent's preferences: {criterion}"
+            )
+            return None
+
         if decision is True:  # received PRO argument
             # iterate through better criteria (assume agents have same criteria)
             for better_criterion in self.preferences.get_preferred_criteria(criterion):
@@ -437,11 +446,12 @@ class ArgumentModel(Model):
             colorama.Fore.GREEN,
         ]
 
+        self.agents = []
         for i, agent_name in enumerate(["Bob", "Alice"]):
             a = ArgumentAgent(i, self, agent_name, Preferences(), available_colors[i])
             a.generate_random_preferences(list_items)
+            self.agents.append(a)
             self.schedule.add(a)
-
         self.running = True
         self.step_count = 0
 
@@ -449,8 +459,10 @@ class ArgumentModel(Model):
         self.__messages_service.dispatch_messages()
         self.schedule.step()
         self.step_count += 1
-        if self.step_count == 4:
+        if all(agent.done_negotiating for agent in self.agents):
             self.running = False
+        # if self.step_count == 4:
+        #     self.running = False
 
     def get_message_history(self):
         history = self.__messages_service.get_message_history()
