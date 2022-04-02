@@ -19,23 +19,25 @@ from communication.arguments.Argument import Argument
 import random as rd
 import pandas as pd
 import logging
+import colorama
 
 
 class ArgumentAgent(CommunicatingAgent):
     """ArgumentAgent which inherit from CommunicatingAgent."""
 
-    def __init__(self, unique_id, model, name, preferences):
+    def __init__(self, unique_id, model, name, preferences, log_color):
         super().__init__(unique_id, model, name)
         self.preferences = None
-        self.logger = self._init_logger(name)
+        self.logger = self._init_logger(name, log_color)
 
     @staticmethod
-    def _init_logger(name):
+    def _init_logger(name, log_color):
         logger = logging.getLogger(name)
         console = logging.StreamHandler()
         console.setLevel(logging.DEBUG)
+
         formatter = logging.Formatter(
-            "%(asctime)s - %(levelname)s - %(name)s >> %(message)s"
+            f"{log_color}%(asctime)s - %(levelname)s - %(name)s >> %(message)s"
         )
         console.setFormatter(formatter)
         logger.addHandler(console)
@@ -339,7 +341,7 @@ class ArgumentAgent(CommunicatingAgent):
                     if y in [
                         Value.VERY_BAD,
                         Value.BAD,
-                    ]:  # TODO: could be replaced with y > x
+                    ]:  # TODO: could be replaced with y < x
                         arg = Argument(False, item)
                         arg.add_premise_couple_values(better_criterion, y)
                         arg.add_premise_comparison(better_criterion, criterion)
@@ -365,6 +367,7 @@ class ArgumentAgent(CommunicatingAgent):
                 )
                 return arg  #  argue(not oi, ci = y, y is worst than x)
         else:  # CON argument
+            # TODO: problem: not agreeing on evaluations/preferences can lead to loops
             pass
 
 
@@ -375,14 +378,22 @@ class ArgumentModel(Model):
         self.schedule = BaseScheduler(self)  # RandomActivation(self)
         self.__messages_service = MessageService(self.schedule)
 
-        # To be completed
         list_items = [
             Item("Diesel Engine", "A super cool diesel engine"),
             Item("Electric Engine", "A very quiet engine"),
         ]
+        available_colors = [
+            colorama.Fore.YELLOW,
+            colorama.Fore.BLUE,
+            colorama.Fore.MAGENTA,
+            colorama.Fore.CYAN,
+            colorama.Fore.WHITE,
+            colorama.Fore.RED,
+            colorama.Fore.GREEN,
+        ]
 
         for i, agent_name in enumerate(["Bob", "Alice"]):
-            a = ArgumentAgent(i, self, agent_name, Preferences())
+            a = ArgumentAgent(i, self, agent_name, Preferences(), available_colors[i])
             a.generate_preferences(list_items)
             self.schedule.add(a)
 
@@ -402,6 +413,7 @@ class ArgumentModel(Model):
 
 
 if __name__ == "__main__":
+    colorama.init()  # INFO: used to print colored text on Windows
     logging.basicConfig(level=logging.DEBUG)
     logging.root.handlers = []
     argument_model = ArgumentModel()
