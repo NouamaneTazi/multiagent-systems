@@ -336,7 +336,7 @@ class ArgumentAgent(CommunicatingAgent):
         criterion, prev_worst_criterion = argument.get_comparison()
         criterion, x = argument.get_couple_value()
 
-        if decision == True:  # received PRO argument
+        if decision is True:  # received PRO argument
             # iterate through better criteria (assume agents have same criteria)
             for better_criterion in self.preferences.get_preferred_criteria(criterion):
                 if (
@@ -358,7 +358,7 @@ class ArgumentAgent(CommunicatingAgent):
             for alternative in self.preferences.get_item_list():
                 y = self.preferences.get_value(alternative, criterion)
                 if alternative != item and y and y.value > x.value:
-                    arg = Argument(False, item)
+                    arg = Argument(True, alternative)  # TODO: Argument(False, item) ??
                     arg.add_premise_couple_values(criterion, y)
                     if arg not in global_arguments_dict[item]:
                         return arg  # argue(oj , ci = y, y is better than x) TODO: handle counter argument of this case
@@ -373,7 +373,7 @@ class ArgumentAgent(CommunicatingAgent):
                     criterion, self.preferences.get_value(item, criterion)
                 )
                 if arg not in global_arguments_dict[item]:
-                    return arg  #  argue(not oi, ci = y, y is worst than x)
+                    return arg  # argue(not oi, ci = y, y is worst than x)
         else:  # received CON argument
             # TODO: problem: not agreeing on evaluations/preferences can lead to loops
 
@@ -413,7 +413,7 @@ class ArgumentAgent(CommunicatingAgent):
                     criterion, self.preferences.get_value(item, criterion)
                 )
                 if arg not in global_arguments_dict[item]:
-                    return arg  #  argue(not oi, ci = y, y is better than x)
+                    return arg  # argue(not oi, ci = y, y is better than x)
 
 
 class ArgumentModel(Model):

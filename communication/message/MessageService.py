@@ -20,6 +20,11 @@ class MessageService:
         """Static access method."""
         return MessageService.__instance
 
+    @staticmethod
+    def clear_instance():
+        """Clear the instance of the message service"""
+        MessageService.__instance = None
+
     def __init__(self, scheduler, instant_delivery=True):
         """Create a new MessageService object."""
         if MessageService.__instance is not None:

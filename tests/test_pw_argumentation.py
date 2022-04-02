@@ -1,15 +1,12 @@
 import unittest
-from typing import Dict, List, Tuple
 
 from mesa import Model
 from mesa.time import RandomActivation, BaseScheduler
 
 from pw_argumentation import ArgumentAgent
-from communication.agent.CommunicatingAgent import CommunicatingAgent
 
 from communication.message.MessageService import MessageService
 from communication.message.MessagePerformative import MessagePerformative
-from communication.message.Message import Message
 
 from communication.preferences.CriterionName import CriterionName
 from communication.preferences.CriterionValue import CriterionValue
@@ -17,13 +14,10 @@ from communication.preferences.Item import Item
 from communication.preferences.Value import Value
 from communication.preferences.Preferences import Preferences
 
-from communication.arguments.Argument import Argument
 
-import random as rd
 import pandas as pd
 import logging
 import colorama
-from collections import defaultdict
 
 
 class ArgumentModelTester(Model):
@@ -31,6 +25,8 @@ class ArgumentModelTester(Model):
 
     def __init__(self, agents_prefs):
         self.schedule = BaseScheduler(self)  # RandomActivation(self)
+
+        MessageService.clear_instance()  # clears the MessageService singleton
         self.__messages_service = MessageService(self.schedule)
 
         available_colors = [
@@ -214,6 +210,60 @@ class TestArgumentation(unittest.TestCase):
         self.assertEqual(
             list(history.iloc[3]),
             ["A2", "A1", MessagePerformative.ARGUE, "item1", "con", CriterionName.DURABILITY, Value.VERY_BAD, CriterionName.PRODUCTION_COST]
+        )
+
+    def test_scenario_4(self):
+        """test scenario
+        A1 to A2: propose(item1)
+        A2 to A1: ask_why(item1)
+        A1 to A2: argue(item1, production=good)
+        A2 to A1: argue(item2, production=very_good)
+        """
+        agents_prefs = []  # list of agents agents_prefs
+
+        item1 = Item("item1", "")
+        item2 = Item("item2", "")
+
+        # Agent1
+        list_criteria = [
+            CriterionName.PRODUCTION_COST,
+        ]
+        criteria_values = [
+            CriterionValue(item1, CriterionName.PRODUCTION_COST, Value.GOOD),
+            CriterionValue(item2, CriterionName.PRODUCTION_COST, Value.VERY_BAD),
+        ]
+
+        agents_prefs.append(Preferences(list_criteria, criteria_values))
+
+        # Agent2
+        criteria_values = [
+            CriterionValue(item1, CriterionName.PRODUCTION_COST, Value.GOOD),
+            CriterionValue(item2, CriterionName.PRODUCTION_COST, Value.VERY_GOOD),
+        ]
+        agents_prefs.append(Preferences(list_criteria, criteria_values))
+
+        argument_model = ArgumentModelTester(agents_prefs)
+        argument_model.step()
+        argument_model.step()
+        history = argument_model.get_message_history()
+
+        self.assertEqual(
+            list(history.iloc[0])[:4],
+            ["A1", "A2", MessagePerformative.PROPOSE, "item1"],
+        )
+        self.assertEqual(
+            list(history.iloc[1])[:4],
+            ["A2", "A1", MessagePerformative.ASK_WHY, "item1"],
+        )
+
+        self.assertEqual(
+            list(history.iloc[2]),
+            ["A1", "A2", MessagePerformative.ARGUE, "item1", "pro", CriterionName.PRODUCTION_COST, Value.GOOD, None]
+        )
+
+        self.assertEqual(
+            list(history.iloc[3]),
+            ["A2", "A1", MessagePerformative.ARGUE, "item2", "pro", CriterionName.PRODUCTION_COST, Value.VERY_GOOD, None]
         )
 
 
