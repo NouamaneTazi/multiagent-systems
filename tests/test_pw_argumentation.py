@@ -1,79 +1,82 @@
 import unittest
 from typing import Dict, List, Tuple
 
+from mesa import Model
+from mesa.time import RandomActivation, BaseScheduler
+
+from pw_argumentation import ArgumentAgent
+from communication.agent.CommunicatingAgent import CommunicatingAgent
+
+from communication.message.MessageService import MessageService
+from communication.message.MessagePerformative import MessagePerformative
+from communication.message.Message import Message
+
 from communication.preferences.CriterionName import CriterionName
 from communication.preferences.CriterionValue import CriterionValue
 from communication.preferences.Item import Item
 from communication.preferences.Value import Value
 from communication.preferences.Preferences import Preferences
 
+from communication.arguments.Argument import Argument
+
+import random as rd
+import pandas as pd
+import logging
+import colorama
+from collections import defaultdict
+
+
+class TestArgumentModel(Model):
+    """ArgumentModel which inherit from Model."""
+
+    def __init__(self):
+        self.schedule = BaseScheduler(self)  # RandomActivation(self)
+        self.__messages_service = MessageService(self.schedule)
+
+        list_items = [
+            Item("Diesel Engine", "A super cool diesel engine"),
+            Item("Electric Engine", "A very quiet engine"),
+        ]
+        available_colors = [
+            colorama.Fore.YELLOW,
+            colorama.Fore.BLUE,
+            colorama.Fore.MAGENTA,
+            colorama.Fore.CYAN,
+            colorama.Fore.WHITE,
+            colorama.Fore.RED,
+            colorama.Fore.GREEN,
+        ]
+
+        for i, agent_name in enumerate(["Bob", "Alice"]):
+            a = ArgumentAgent(i, self, agent_name, Preferences(), available_colors[i])
+            a.generate_preferences(list_items)
+            self.schedule.add(a)
+
+        self.running = True
+        self.step_count = 0
+
+    def step(self):
+        self.__messages_service.dispatch_messages()
+        self.schedule.step()
+        self.step_count += 1
+        if self.step_count == 4:
+            self.running = False
+
+    def get_message_history(self):
+        history = self.__messages_service.get_message_history()
+        return pd.DataFrame(history)
+
 
 class TestArgumentation(unittest.TestCase):
     def setUp(self):
-        agent_pref = Preferences()
-        agent_pref.set_criterion_name_list(
-            [
-                CriterionName.PRODUCTION_COST,
-                CriterionName.ENVIRONMENT_IMPACT,
-                CriterionName.CONSUMPTION,
-                CriterionName.DURABILITY,
-                CriterionName.NOISE,
-            ]
-        )
-
-        diesel_engine = Item("Diesel Engine", "A super cool diesel engine")
-        agent_pref.add_criterion_value(
-            CriterionValue(
-                diesel_engine, CriterionName.PRODUCTION_COST, Value.VERY_GOOD
-            )
-        )
-        agent_pref.add_criterion_value(
-            CriterionValue(diesel_engine, CriterionName.CONSUMPTION, Value.GOOD)
-        )
-        agent_pref.add_criterion_value(
-            CriterionValue(diesel_engine, CriterionName.DURABILITY, Value.VERY_GOOD)
-        )
-        agent_pref.add_criterion_value(
-            CriterionValue(
-                diesel_engine, CriterionName.ENVIRONMENT_IMPACT, Value.VERY_BAD
-            )
-        )
-        agent_pref.add_criterion_value(
-            CriterionValue(diesel_engine, CriterionName.NOISE, Value.VERY_BAD)
-        )
-
-        electric_engine = Item("Electric Engine", "A very quiet engine")
-        agent_pref.add_criterion_value(
-            CriterionValue(electric_engine, CriterionName.PRODUCTION_COST, Value.BAD)
-        )
-        agent_pref.add_criterion_value(
-            CriterionValue(electric_engine, CriterionName.CONSUMPTION, Value.VERY_BAD)
-        )
-        agent_pref.add_criterion_value(
-            CriterionValue(electric_engine, CriterionName.DURABILITY, Value.GOOD)
-        )
-        agent_pref.add_criterion_value(
-            CriterionValue(
-                electric_engine, CriterionName.ENVIRONMENT_IMPACT, Value.VERY_GOOD
-            )
-        )
-        agent_pref.add_criterion_value(
-            CriterionValue(electric_engine, CriterionName.NOISE, Value.VERY_GOOD)
-        )
-
-        self.agent_pref = agent_pref
-        self.items = {
-            "diesel_engine": diesel_engine,
-            "electric_engine": electric_engine,
-        }
+        colorama.init()  # INFO: used to print colored text on Windows
+        logging.basicConfig(level=logging.DEBUG)
+        logging.root.handlers = []
 
     def test_perf_get_value(self):
         """test get_value performance method"""
-        diesel_engine = self.items["diesel_engine"]
-        self.assertEqual(
-            diesel_engine.get_value(self.agent_pref, CriterionName.PRODUCTION_COST),
-            Value.VERY_GOOD,
-        )
+        argument_model = TestArgumentModel()
+        argument_model.run_model()
 
 
 if __name__ == "__main__":

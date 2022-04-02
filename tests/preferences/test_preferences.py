@@ -124,12 +124,17 @@ class TestPreferences(unittest.TestCase):
         diesel_engine = self.items["diesel_engine"]
         electric_engine = self.items["electric_engine"]
 
-        self.assertTrue(
-            agent_pref.is_item_among_top_10_percent(diesel_engine, electric_engine)
-        )
-        self.assertFalse(
-            agent_pref.is_item_among_top_10_percent(electric_engine, diesel_engine)
-        )
+        self.assertFalse(agent_pref.is_item_among_top_10_percent(diesel_engine))
+        self.assertFalse(agent_pref.is_item_among_top_10_percent(electric_engine))
+
+    def test_is_item_among_top_50_percent(self):
+        """test is_item_among_top_50_percent method"""
+        agent_pref = self.agent_pref
+        diesel_engine = self.items["diesel_engine"]
+        electric_engine = self.items["electric_engine"]
+
+        self.assertTrue(agent_pref.is_item_among_top_x_percent(diesel_engine, 50))
+        self.assertFalse(agent_pref.is_item_among_top_x_percent(electric_engine, 50))
 
 
 if __name__ == "__main__":

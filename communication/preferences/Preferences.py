@@ -96,7 +96,7 @@ class Preferences:
                 best_item = item
         return best_item
 
-    def is_item_among_top_10_percent(self, item, list_items):
+    def is_item_among_top_10_percent(self, item, list_items=None):
         """
         Return whether a given item is among the top 10 percent of the preferred items.
 
