@@ -19,6 +19,16 @@ class Comparison:
         """Returns a string representation of the comparison."""
         return f"{self.__best_criterion_name.name}>{self.__worst_criterion_name.name}"
 
+    def __eq__(self, o):
+        """Return True if Comparisons are equal."""
+        if isinstance(o, Comparison):
+            return (
+                self.__best_criterion_name == o.__best_criterion_name
+                and self.__worst_criterion_name == o.__worst_criterion_name
+            )
+        else:
+            return False
+
     def get_worst_criterion_name(self):
         return self.__worst_criterion_name
 

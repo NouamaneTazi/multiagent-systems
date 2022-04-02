@@ -26,6 +26,18 @@ class Argument:
         """Returns a string representation of the argument."""
         return f"{'not' if not self.__decision else ''} {self.__item}, {' and '.join(map(str, self.__comparison_list + self.__couple_values_list))}"
 
+    def __eq__(self, o):
+        """Return True if Arguments are equal."""
+        if isinstance(o, Argument):
+            return (
+                self.__decision == o.__decision
+                and self.__item == o.__item
+                and self.__comparison_list == o.__comparison_list
+                and self.__couple_values_list == o.__couple_values_list
+            )
+        else:
+            return False
+
     def add_premise_comparison(self, criterion_name_1, criterion_name_2):
         """Adds a premise comparison in the comparison list."""
         self.__comparison_list.append(Comparison(criterion_name_1, criterion_name_2))

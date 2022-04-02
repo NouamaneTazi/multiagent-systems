@@ -19,6 +19,16 @@ class CoupleValue:
         """Returns a string representation of the couple value."""
         return f"{self.__criterion_name.name}={self.__value.name}"
 
+    def __eq__(self, o):
+        """Return True if CoupleValues are equal."""
+        if isinstance(o, CoupleValue):
+            return (
+                self.__criterion_name == o.__criterion_name
+                and self.__value == o.__value
+            )
+        else:
+            return False
+
     def get_criterion_name(self):
         return self.__criterion_name
 

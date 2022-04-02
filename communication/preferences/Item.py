@@ -32,6 +32,10 @@ class Item:
         else:
             return False
 
+    def __hash__(self):
+        """Returns the hash of the Item."""
+        return hash(self.__name)
+
     def get_name(self):
         """Returns the name of the item."""
         return self.__name

@@ -20,6 +20,9 @@ import random as rd
 import pandas as pd
 import logging
 import colorama
+from collections import defaultdict
+
+global_arguments_dict = defaultdict(list)
 
 
 class ArgumentAgent(CommunicatingAgent):
@@ -49,14 +52,20 @@ class ArgumentAgent(CommunicatingAgent):
         if len(messages) == 0:
             # propose item
             item = self.preferences.most_preferred()
-            target = self.get_random_target()
-            proposal = Message(
-                self.get_name(), target.get_name(), MessagePerformative.PROPOSE, [item]
-            )
-            self.logger.info(
-                f"No messages received. Proposing {item.get_name()} to {target.get_name()}"
-            )
-            self.send_message(proposal)
+            if item:
+                target = self.get_random_target()
+                proposal = Message(
+                    self.get_name(),
+                    target.get_name(),
+                    MessagePerformative.PROPOSE,
+                    [item],
+                )
+                self.logger.info(
+                    f"No messages received. Proposing {item.get_name()} to {target.get_name()}"
+                )
+                self.send_message(proposal)
+            else:
+                self.logger.info("No messages received. No items to propose.")
         else:
             for message in messages:
                 if message.get_performative() == MessagePerformative.ACCEPT:
@@ -89,6 +98,7 @@ class ArgumentAgent(CommunicatingAgent):
             self.logger.info(
                 f"Received argument from {target_name}. Sending counter argument: {counter_argument}"
             )
+            global_arguments_dict[item].append(counter_argument)
             self.send_message(message)
 
         else:  # accept proposal
@@ -117,26 +127,32 @@ class ArgumentAgent(CommunicatingAgent):
             self.logger.info(
                 f"Received ASK_WHY message from {target_name}. Giving argument:{argument}"
             )
+            global_arguments_dict[item].append(argument)
             self.send_message(message)
         else:
             # propose another item
             other_items = self.preferences.get_item_list()
             other_items.remove(item)
             item = self.preferences.most_preferred(other_items)
-            proposal = Message(
-                self.get_name(), target_name, MessagePerformative.PROPOSE, [item]
-            )
-            self.logger.info(
-                f"No args for previous item. Proposing new item: {item.get_name()} to {target_name}"
-            )
-            self.send_message(proposal)
+            if item:
+                proposal = Message(
+                    self.get_name(), target_name, MessagePerformative.PROPOSE, [item]
+                )
+                self.logger.info(
+                    f"No args for previous item. Proposing new item: {item.get_name()} to {target_name}"
+                )
+                self.send_message(proposal)
+            else:
+                self.logger.info(
+                    " No args for previous item. No more items to propose."
+                )
 
     def handle_commit(self, message):
         item = message.get_content()[0]
         target_name = message.get_exp()
         message = Message(
             self.get_name(),
-            target_name,
+            None,
             MessagePerformative.COMMIT,
             [item],
         )
@@ -151,34 +167,21 @@ class ArgumentAgent(CommunicatingAgent):
 
     def handle_accept(self, message):
         item = message.get_content()[0]
-        if item in self.preferences.get_item_list():
-            target_name = message.get_exp()
-            message = Message(
-                self.get_name(),
-                target_name,
-                MessagePerformative.COMMIT,
-                [item],
-            )
-            self.logger.info(
-                f"Received ACCEPT message from {target_name}. Committing {item.get_name()}"
-            )
-            self.send_message(message)
-            self.preferences.remove_item(item)
-            self.logger.debug(
-                f"Removed {item.get_name()} from preferences. New preferences: {self.preferences}"
-            )
-        else:
-            target_name = message.get_exp()
-            message = Message(
-                self.get_name(),
-                target_name,
-                MessagePerformative.ARGUE,
-                [item],
-            )
-            self.logger.info(
-                f"Received ACCEPT message from {target_name} but {item.get_name()} is not among preferences. Starts arguing."
-            )
-            self.send_message(message)
+        target_name = message.get_exp()
+        message = Message(
+            self.get_name(),
+            target_name,
+            MessagePerformative.COMMIT,
+            [item],
+        )
+        self.logger.info(
+            f"Received ACCEPT message from {target_name}. Committing {item.get_name()}"
+        )
+        self.send_message(message)
+        self.preferences.remove_item(item)
+        self.logger.debug(
+            f"Removed {item.get_name()} from preferences. New preferences: {self.preferences}"
+        )
 
     def handle_propose(self, message):
         """Accepts proposal if item is among top 10 preferred items, otherwise asks why."""
@@ -330,7 +333,7 @@ class ArgumentAgent(CommunicatingAgent):
         criterion, prev_worst_criterion = argument.get_comparison()
         criterion, x = argument.get_couple_value()
 
-        if decision == True:  # PRO argument
+        if decision == True:  # received PRO argument
             # iterate through better criteria (assume agents have same criteria)
             for better_criterion in self.preferences.get_preferred_criteria(criterion):
                 if (
@@ -345,8 +348,8 @@ class ArgumentAgent(CommunicatingAgent):
                         arg = Argument(False, item)
                         arg.add_premise_couple_values(better_criterion, y)
                         arg.add_premise_comparison(better_criterion, criterion)
-                        # argue(not oi, cj = y with y is worst than x, cj > ci)
-                        return arg
+                        if arg not in global_arguments_dict[item]:
+                            return arg  # argue(not oi, cj = y with y is worst than x, cj > ci)
 
             # check for better alternative on same criterion
             for alternative in self.preferences.get_item_list():
@@ -354,7 +357,8 @@ class ArgumentAgent(CommunicatingAgent):
                 if alternative != item and y and y.value > x.value:
                     arg = Argument(False, item)
                     arg.add_premise_couple_values(criterion, y)
-                    return arg  # argue(oj , ci = y, y is better than x)
+                    if arg not in global_arguments_dict[item]:
+                        return arg  # argue(oj , ci = y, y is better than x) TODO: handle counter argument of this case
 
             # check for bad evaluation on same criterion
             if self.preferences.get_value(item, criterion) in [
@@ -365,10 +369,48 @@ class ArgumentAgent(CommunicatingAgent):
                 arg.add_premise_couple_values(
                     criterion, self.preferences.get_value(item, criterion)
                 )
-                return arg  #  argue(not oi, ci = y, y is worst than x)
-        else:  # CON argument
+                if arg not in global_arguments_dict[item]:
+                    return arg  #  argue(not oi, ci = y, y is worst than x)
+        else:  # received CON argument
             # TODO: problem: not agreeing on evaluations/preferences can lead to loops
-            pass
+
+            # iterate through better criteria (assume agents have same criteria)
+            for better_criterion in self.preferences.get_preferred_criteria(criterion):
+                if (
+                    prev_worst_criterion != better_criterion
+                ):  # TODO try to avoid loop by giving the same previously rejected criterion
+                    # has good evaluation on more important criterion
+                    y = self.preferences.get_value(item, better_criterion)
+                    if y in [
+                        Value.VERY_GOOD,
+                        Value.GOOD,
+                    ]:
+                        arg = Argument(True, item)
+                        arg.add_premise_couple_values(better_criterion, y)
+                        arg.add_premise_comparison(better_criterion, criterion)
+                        if arg not in global_arguments_dict[item]:
+                            return arg  # argue(oi, cj = y with y is better than x, cj > ci)
+
+            # check for better alternative on same criterion
+            # for alternative in self.preferences.get_item_list():
+            #     y = self.preferences.get_value(alternative, criterion)
+            #     if alternative != item and y and y.value > x.value:
+            #         arg = Argument(True, item)
+            #         arg.add_premise_couple_values(criterion, y)
+            #         if arg not in global_arguments_dict[item]:
+            #             return arg  # argue(oj , ci = y, y is better than x)
+
+            # check for good evaluation on same criterion
+            if self.preferences.get_value(item, criterion) in [
+                Value.VERY_GOOD,
+                Value.GOOD,
+            ]:
+                arg = Argument(True, item)
+                arg.add_premise_couple_values(
+                    criterion, self.preferences.get_value(item, criterion)
+                )
+                if arg not in global_arguments_dict[item]:
+                    return arg  #  argue(not oi, ci = y, y is better than x)
 
 
 class ArgumentModel(Model):
@@ -404,7 +446,7 @@ class ArgumentModel(Model):
         self.__messages_service.dispatch_messages()
         self.schedule.step()
         self.step_count += 1
-        if self.step_count == 2:
+        if self.step_count == 4:
             self.running = False
 
     def get_message_history(self):
