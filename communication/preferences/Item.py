@@ -10,14 +10,14 @@ class Item:
         description: the description of the item
     """
 
-    def __init__(self, name, description):
+    def __init__(self, name, description=None):
         """Creates a new Item."""
         self.__name = name
         self.__description = description
 
     def __str__(self):
         """Returns Item as a String."""
-        return self.__name + " (" + self.__description + ")"
+        return self.__name + " (" + self.__description + ")" if self.__description else self.__name
 
     def __repr__(self):
         """Returns Item as a String."""

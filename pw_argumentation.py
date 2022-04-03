@@ -72,6 +72,8 @@ class ArgumentAgent(CommunicatingAgent):
             for message in messages:
                 if message.get_performative() == MessagePerformative.ACCEPT:
                     self.handle_accept(message)
+                elif message.get_performative() == MessagePerformative.REJECT:
+                    self.handle_reject(message)
                 elif message.get_performative() == MessagePerformative.PROPOSE:
                     self.handle_propose(message)
                 elif message.get_performative() == MessagePerformative.COMMIT:
@@ -95,15 +97,15 @@ class ArgumentAgent(CommunicatingAgent):
                 self.get_name(),
                 target_name,
                 MessagePerformative.ARGUE,
-                [item, counter_argument],
+                [item, counter_argument],  # TODO: Warning: item and counter_argument.item are not the same
             )
             self.logger.info(
                 f"Received argument from {target_name}. Sending counter argument: {counter_argument}"
             )
-            global_arguments_dict[item].append(counter_argument)
+            global_arguments_dict[argument.get_item()].append(counter_argument)
             self.send_message(message)
 
-        else:  # accept proposal
+        elif argument.get_conclusion()[1]:  # accept proposal
             message = Message(
                 self.get_name(),
                 target_name,
@@ -112,6 +114,18 @@ class ArgumentAgent(CommunicatingAgent):
             )
             self.logger.info(
                 f"Accepting proposal {item.get_name()} from {target_name} because no counter argument"
+            )
+            self.send_message(message)
+
+        else:  # reject item
+            message = Message(
+                self.get_name(),
+                target_name,
+                MessagePerformative.REJECT,
+                [item],
+            )
+            self.logger.info(
+                f"Rejecting my proposal {item.get_name()} because no counter argument"
             )
             self.send_message(message)
 
@@ -167,6 +181,7 @@ class ArgumentAgent(CommunicatingAgent):
         self.logger.debug(
             f"Removed {item.get_name()} from preferences. New preferences: {self.preferences}"
         )
+        self.done_negotiating = True
 
     def handle_accept(self, message):
         item = message.get_content()[0]
@@ -185,6 +200,32 @@ class ArgumentAgent(CommunicatingAgent):
         self.logger.debug(
             f"Removed {item.get_name()} from preferences. New preferences: {self.preferences}"
         )
+        self.done_negotiating = True
+
+    def handle_reject(self, message):
+        item = message.get_content()[0]
+        target_name = message.get_exp()
+        self.preferences.remove_item(item)
+        self.logger.debug(
+            f"Removed {item.get_name()} from preferences. New preferences: {self.preferences}"
+        )
+
+        # propose new item
+        item = self.preferences.most_preferred()
+        if item:
+            proposal = Message(
+                self.get_name(),
+                target_name,
+                MessagePerformative.PROPOSE,
+                [item],
+            )
+            self.logger.info(
+                f"Received REJECT message from {target_name}. Proposing {item.get_name()} to {target_name}"
+            )
+            self.send_message(proposal)
+        else:
+            self.logger.info(f"Received REJECT message from {target_name}. No items to propose.")
+            self.done_negotiating = True
 
     def handle_propose(self, message):
         """Accepts proposal if item is among top 10 preferred items, otherwise asks why."""
@@ -326,9 +367,12 @@ class ArgumentAgent(CommunicatingAgent):
             return None
         return arg_list[0]
 
-    # def argument_parsing(self, argument): #INFO: judged not necessary
-    #     """Parses an argument and returns its premises and its conclusion"""
-    #     return [argument.get_decision(), argument.get_premises()]
+    def argument_parsing(self, argument):
+        """Parses an argument and returns its premises and its conclusion"""
+        item, decision = argument.get_conclusion()
+        criterion, prev_worst_criterion = argument.get_comparison()
+        criterion, x = argument.get_couple_value()
+        return (item, decision, criterion, x, prev_worst_criterion)
 
     def get_counter_argument(self, argument):
         """Returns a counter argument such as:
@@ -433,8 +477,11 @@ class ArgumentModel(Model):
         self.__messages_service = MessageService(self.schedule)
 
         list_items = [
-            Item("Diesel Engine", "A super cool diesel engine"),
-            Item("Electric Engine", "A very quiet engine"),
+            Item("Engine 1"),
+            Item("Engine 2"),
+            Item("Engine 3"),
+            Item("Engine 4"),
+            Item("Engine 5"),
         ]
         available_colors = [
             colorama.Fore.YELLOW,
@@ -461,12 +508,32 @@ class ArgumentModel(Model):
         self.step_count += 1
         if all(agent.done_negotiating for agent in self.agents):
             self.running = False
-        # if self.step_count == 4:
-        #     self.running = False
+        if self.step_count == 30:
+            self.running = False
 
     def get_message_history(self):
         history = self.__messages_service.get_message_history()
         return pd.DataFrame(history)
+
+    def get_final_result(self):
+        history = self.__messages_service.get_message_history()
+        results = {}
+        for i in range(len(history) - 1, -1, -1):
+            if history[i]["performative"] == MessagePerformative.ACCEPT:
+                results["winning_agent"] = history[i]["receiver"]
+                results["winning_item"] = history[i]["item"]
+                if history[i-1]["performative"] == MessagePerformative.ARGUE:
+                    results["winning_argument"] = {
+                        "item": history[i-1]["item"],
+                        "decision": history[i-1]["decision"],
+                        "main_criterion": history[i-1]["main_criterion"],
+                        "value": history[i-1]["value"],
+                        "secondary_criterion": history[i-1]["secondary_criterion"],
+                    }
+                    return results
+                results["winning_argument"] = "top_10_percent"
+                return results
+
 
 
 if __name__ == "__main__":
@@ -475,3 +542,11 @@ if __name__ == "__main__":
     logging.root.handlers = []
     argument_model = ArgumentModel()
     argument_model.run_model()
+
+    history = argument_model.get_message_history()
+    print(history)
+    results = argument_model.get_final_result()
+    print(results)
+
+    #TODO: investigate why we never get PROPOSE item1 ----> COMMIT item2
+

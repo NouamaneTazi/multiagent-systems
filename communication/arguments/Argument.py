@@ -46,6 +46,10 @@ class Argument:
         """Add a premise couple values in the couple values list."""
         self.__couple_values_list.append(CoupleValue(criterion_name, value))
 
+    def get_item(self):
+        """Returns the item of the argument."""
+        return self.__item
+
     def get_conclusion(self):
         """Returns the conclusion of the argument."""
         return (self.__item, self.__decision)
