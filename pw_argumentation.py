@@ -33,6 +33,7 @@ class ArgumentAgent(CommunicatingAgent):
         self.preferences = preferences
         self.logger = self._init_logger(name, log_color)
         self.done_negotiating = False
+        self.no_args_items = []  # items for which we have no arguments
 
     @staticmethod
     def _init_logger(name, log_color):
@@ -50,7 +51,7 @@ class ArgumentAgent(CommunicatingAgent):
         messages = self.get_new_messages()
         if len(messages) == 0:
             # propose item
-            item = self.preferences.most_preferred()
+            item = self.preferences.most_preferred(exclude_list=self.no_args_items)
             if item:
                 target = self.get_random_target()
                 proposal = Message(
@@ -140,7 +141,7 @@ class ArgumentAgent(CommunicatingAgent):
             # propose another item
             other_items = self.preferences.get_item_list().copy()
             other_items.remove(item)
-            item = self.preferences.most_preferred(other_items)
+            item = self.preferences.most_preferred(exclude_list=self.no_args_items)
             if item:
                 proposal = Message(self.get_name(), target_name, MessagePerformative.PROPOSE, [item])
                 self.logger.info(f"No args for previous item. Proposing new item: {item.get_name()} to {target_name}")
@@ -186,7 +187,7 @@ class ArgumentAgent(CommunicatingAgent):
         self.logger.debug(f"Removed {item.get_name()} from preferences. New preferences: {self.preferences}")
 
         # propose new item
-        item = self.preferences.most_preferred()
+        item = self.preferences.most_preferred(exclude_list=self.no_args_items)
         if item:
             proposal = Message(
                 self.get_name(),
@@ -333,6 +334,7 @@ class ArgumentAgent(CommunicatingAgent):
             self.logger.debug(
                 f"Agent {self.get_name()} received ASK_WHY message but has no arguments to support {item}"
             )
+            self.no_args_items.append(item)
             return None
         return arg_list[0]
 
@@ -437,6 +439,8 @@ class ArgumentModel(Model):
 
     def __init__(self):
         self.schedule = BaseScheduler(self)  # RandomActivation(self)
+
+        MessageService.clear_instance()  # clears old MessageService singleton
         self.__messages_service = MessageService(self.schedule)
 
         list_items = [
@@ -509,3 +513,5 @@ if __name__ == "__main__":
     print(history)
     results = argument_model.get_final_result()
     print(results)
+
+    # TODO: case where both agents have no arguments for the same item (endless loop)

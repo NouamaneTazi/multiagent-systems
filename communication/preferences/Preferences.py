@@ -57,15 +57,10 @@ class Preferences:
     def get_value(self, item, criterion_name):
         """Gets the value for a given item and a given criterion name."""
         for value in self.__criterion_value_list:
-            if (
-                value.get_item() == item
-                and value.get_criterion_name() == criterion_name
-            ):
+            if value.get_item() == item and value.get_criterion_name() == criterion_name:
                 return value.get_value()
 
-        raise Exception(
-            f"No value found for item {item} and criterion {criterion_name}"
-        )
+        raise Exception(f"No value found for item {item} and criterion {criterion_name}")
         return None
 
     def is_preferred_criterion(self, criterion_name_1, criterion_name_2):
@@ -78,11 +73,7 @@ class Preferences:
 
     def get_preferred_criteria(self, criterion):
         """Returns the list of preferred criteria then criterion (excluding input criterion)."""
-        return [
-            c
-            for c in self.__criterion_name_list
-            if self.is_preferred_criterion(c, criterion) and c != criterion
-        ]
+        return [c for c in self.__criterion_name_list if self.is_preferred_criterion(c, criterion) and c != criterion]
 
     def is_preferred_item(self, item_1, item_2, criterion=None):
         """Returns if the item 1 is preferred to the item 2."""
@@ -90,18 +81,17 @@ class Preferences:
             return self.get_value(item_1, criterion) > self.get_value(item_2, criterion)
         return item_1.get_score(self) > item_2.get_score(self)
 
-    def most_preferred(self, item_list=None):
+    def most_preferred(self, item_list=None, exclude_list=None):
         """Returns the most preferred item from a list. If no list is given, the list of items known by agent is used."""
         if not item_list or len(item_list) == 0:
-            if len(self.__item_list) == 0:
-                return None
-            else:
-                item_list = self.__item_list
+            item_list = self.__item_list
+        if exclude_list and len(exclude_list) > 0:
+            item_list = [item for item in item_list if item not in exclude_list]
+        if len(item_list) == 0:
+            return None
         best_item = item_list[0]
         for item in item_list:
-            if self.is_preferred_item(
-                item, best_item
-            ):  # TODO: check if we need to shuffle the list before
+            if self.is_preferred_item(item, best_item):  # TODO: check if we need to shuffle the list before
                 best_item = item
         return best_item
 
@@ -121,9 +111,7 @@ class Preferences:
         """
         if list_items is None:
             list_items = self.__item_list
-        assert (
-            len(list_items) > 0 and item in list_items
-        ), f"{item} is not in {list_items}"
+        assert len(list_items) > 0 and item in list_items, f"{item} is not in {list_items}"
         scores = [item.get_score(self) for item in list_items]
         scores.sort(reverse=True)
         top_x_percent = scores[: int(len(scores) * x / 100)]
@@ -151,70 +139,26 @@ if __name__ == "__main__":
     )
 
     diesel_engine = Item("Diesel Engine", "A super cool diesel engine")
-    agent_pref.add_criterion_value(
-        CriterionValue(diesel_engine, CriterionName.PRODUCTION_COST, Value.VERY_GOOD)
-    )
-    agent_pref.add_criterion_value(
-        CriterionValue(diesel_engine, CriterionName.CONSUMPTION, Value.GOOD)
-    )
-    agent_pref.add_criterion_value(
-        CriterionValue(diesel_engine, CriterionName.DURABILITY, Value.VERY_GOOD)
-    )
-    agent_pref.add_criterion_value(
-        CriterionValue(diesel_engine, CriterionName.ENVIRONMENT_IMPACT, Value.VERY_BAD)
-    )
-    agent_pref.add_criterion_value(
-        CriterionValue(diesel_engine, CriterionName.NOISE, Value.VERY_BAD)
-    )
+    agent_pref.add_criterion_value(CriterionValue(diesel_engine, CriterionName.PRODUCTION_COST, Value.VERY_GOOD))
+    agent_pref.add_criterion_value(CriterionValue(diesel_engine, CriterionName.CONSUMPTION, Value.GOOD))
+    agent_pref.add_criterion_value(CriterionValue(diesel_engine, CriterionName.DURABILITY, Value.VERY_GOOD))
+    agent_pref.add_criterion_value(CriterionValue(diesel_engine, CriterionName.ENVIRONMENT_IMPACT, Value.VERY_BAD))
+    agent_pref.add_criterion_value(CriterionValue(diesel_engine, CriterionName.NOISE, Value.VERY_BAD))
 
     electric_engine = Item("Electric Engine", "A very quiet engine")
-    agent_pref.add_criterion_value(
-        CriterionValue(electric_engine, CriterionName.PRODUCTION_COST, Value.BAD)
-    )
-    agent_pref.add_criterion_value(
-        CriterionValue(electric_engine, CriterionName.CONSUMPTION, Value.VERY_BAD)
-    )
-    agent_pref.add_criterion_value(
-        CriterionValue(electric_engine, CriterionName.DURABILITY, Value.GOOD)
-    )
-    agent_pref.add_criterion_value(
-        CriterionValue(
-            electric_engine, CriterionName.ENVIRONMENT_IMPACT, Value.VERY_GOOD
-        )
-    )
-    agent_pref.add_criterion_value(
-        CriterionValue(electric_engine, CriterionName.NOISE, Value.VERY_GOOD)
-    )
+    agent_pref.add_criterion_value(CriterionValue(electric_engine, CriterionName.PRODUCTION_COST, Value.BAD))
+    agent_pref.add_criterion_value(CriterionValue(electric_engine, CriterionName.CONSUMPTION, Value.VERY_BAD))
+    agent_pref.add_criterion_value(CriterionValue(electric_engine, CriterionName.DURABILITY, Value.GOOD))
+    agent_pref.add_criterion_value(CriterionValue(electric_engine, CriterionName.ENVIRONMENT_IMPACT, Value.VERY_GOOD))
+    agent_pref.add_criterion_value(CriterionValue(electric_engine, CriterionName.NOISE, Value.VERY_GOOD))
 
     """test list of preferences"""
     print(diesel_engine)
     print(electric_engine)
     print(diesel_engine.get_value(agent_pref, CriterionName.PRODUCTION_COST))
-    print(
-        agent_pref.is_preferred_criterion(
-            CriterionName.CONSUMPTION, CriterionName.NOISE
-        )
-    )
-    print(
-        "Electric Engine > Diesel Engine : {}".format(
-            agent_pref.is_preferred_item(electric_engine, diesel_engine)
-        )
-    )
-    print(
-        "Diesel Engine > Electric Engine : {}".format(
-            agent_pref.is_preferred_item(diesel_engine, electric_engine)
-        )
-    )
-    print(
-        "Electric Engine (for agent 1) = {}".format(
-            electric_engine.get_score(agent_pref)
-        )
-    )
-    print(
-        "Diesel Engine (for agent 1) = {}".format(diesel_engine.get_score(agent_pref))
-    )
-    print(
-        "Most preferred item is : {}".format(
-            agent_pref.most_preferred([diesel_engine, electric_engine]).get_name()
-        )
-    )
+    print(agent_pref.is_preferred_criterion(CriterionName.CONSUMPTION, CriterionName.NOISE))
+    print("Electric Engine > Diesel Engine : {}".format(agent_pref.is_preferred_item(electric_engine, diesel_engine)))
+    print("Diesel Engine > Electric Engine : {}".format(agent_pref.is_preferred_item(diesel_engine, electric_engine)))
+    print("Electric Engine (for agent 1) = {}".format(electric_engine.get_score(agent_pref)))
+    print("Diesel Engine (for agent 1) = {}".format(diesel_engine.get_score(agent_pref)))
+    print("Most preferred item is : {}".format(agent_pref.most_preferred([diesel_engine, electric_engine]).get_name()))
