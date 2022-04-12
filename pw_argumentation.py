@@ -18,6 +18,7 @@ from communication.arguments.Argument import Argument
 
 import random as rd
 import pandas as pd
+import copy
 import logging
 import colorama
 from collections import defaultdict
@@ -465,6 +466,7 @@ class ArgumentModel(Model):
             colorama.Fore.RED,
             colorama.Fore.GREEN,
         ]
+
         if agents_prefs is None or len(agents_prefs) == 0:
             for i, agent_name in enumerate(["Bob", "Alice"]):
                 a = ArgumentAgent(i, self, agent_name, Preferences(), available_colors[i])
@@ -472,6 +474,9 @@ class ArgumentModel(Model):
                 self.agents.append(a)
                 self.schedule.add(a)
         else:
+            # deepcopy agents_prefs
+            agents_prefs = copy.deepcopy(agents_prefs)
+
             for i, preferences in enumerate(agents_prefs):
                 a = ArgumentAgent(i, self, f"A{i+1}", preferences, available_colors[i])
                 self.agents.append(a)
@@ -567,7 +572,7 @@ def generate_preferences():
 
 if __name__ == "__main__":
     colorama.init()  # INFO: used to print colored text on Windows
-    logging.basicConfig(level=logging.WARNING)  # DEBUG, INFO, WARNING, ERROR
+    logging.basicConfig(level=logging.DEBUG)  # DEBUG, INFO, WARNING, ERROR
     logging.root.handlers = []
 
     # generate preferences
