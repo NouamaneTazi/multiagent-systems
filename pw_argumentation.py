@@ -539,18 +539,59 @@ def format_argument(arg):
     return s
 
 
+import numpy as np
+
+
+def generate_pref_df(n_items=2, n_crit=len(CriterionName), n_values=len(Value)):
+    # generate preferences
+    df = pd.DataFrame(np.random.randint(0, n_values, size=(n_items, n_crit)))
+    # shuffle agent criteria preference order
+    df.columns = np.random.permutation(df.columns)
+    # drop random number of preferences
+    df = df.drop(columns=np.random.choice(df.columns, size=np.random.randint(0, len(df.columns)), replace=False))
+    return df
+
+
+def generate_preferences():
+    df = generate_pref_df()
+    for i, row in df.iterrows():
+        list_criteria = []
+        criteria_values = []
+        for j, val in row.iteritems():
+            list_criteria.append(CriterionName(j))
+            criteria_values.append(CriterionValue(Item(f"item{i+1}"), CriterionName(j), Value(val)))
+            df.rename(columns={j: CriterionName(j).name}, inplace=True)
+        df.rename(index={i: Item(f"item{i+1}")}, inplace=True)
+    return Preferences(list_criteria, criteria_values), df
+
+
 if __name__ == "__main__":
     colorama.init()  # INFO: used to print colored text on Windows
     logging.basicConfig(level=logging.WARNING)  # DEBUG, INFO, WARNING, ERROR
     logging.root.handlers = []
-    argument_model = ArgumentModel()
+
+    # generate preferences
+    print()
+    prefs_1, df1 = generate_preferences()
+    print("Agent 1 preferences:")
+    print(df1)
+    print("-" * 100)
+    prefs_2, df2 = generate_preferences()
+    print("Agent 2 preferences:")
+    print(df2)
+    print("-" * 100)
+
+    argument_model = ArgumentModel([prefs_1, prefs_2])
     argument_model.run_model()
 
     results, history = argument_model.get_final_result()
+    print("Results:")
     if results:
-        print("Winning agent:", results["winning_agent"])
-        print("Winning item:", results["winning_item"])
-        print("Winning argument:", format_argument(results["winning_argument"]))
+        print("\tWinning agent:", results["winning_agent"])
+        print("\tWinning item:", results["winning_item"])
+        print("\tWinning argument:", format_argument(results["winning_argument"]))
+    else:
+        print("No winner")
 
     print()
     print(history)
