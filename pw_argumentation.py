@@ -481,7 +481,7 @@ class ArgumentModel(Model):
         self.step_count += 1
         if all(agent.done_negotiating for agent in self.agents):
             self.running = False
-        if self.step_count == 30:
+        if self.step_count == 100:
             self.running = False
 
     def get_message_history(self):
@@ -503,9 +503,9 @@ class ArgumentModel(Model):
                         "value": history[i - 1]["value"],
                         "secondary_criterion": history[i - 1]["secondary_criterion"],
                     }
-                    return results
+                    return results, pd.DataFrame(history)
                 results["winning_argument"] = "top_10_percent"
-                return results
+                return results, pd.DataFrame(history)
 
 
 def format_argument(arg):
@@ -524,10 +524,11 @@ if __name__ == "__main__":
     argument_model = ArgumentModel()
     argument_model.run_model()
 
-    results = argument_model.get_final_result()
-    print("Winning agent:", results["winning_agent"])
-    print("Winning item:", results["winning_item"])
-    print("Winning argument:", format_argument(results["winning_argument"]))
+    results, history = argument_model.get_final_result()
+    if results:
+        print("Winning agent:", results["winning_agent"])
+        print("Winning item:", results["winning_item"])
+        print("Winning argument:", format_argument(results["winning_argument"]))
 
-    history = argument_model.get_message_history()
+    print()
     print(history)
