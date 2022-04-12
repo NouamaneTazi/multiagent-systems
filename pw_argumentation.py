@@ -18,6 +18,7 @@ from communication.arguments.Argument import Argument
 
 import random as rd
 import pandas as pd
+import numpy as np
 import copy
 import logging
 import colorama
@@ -544,21 +545,19 @@ def format_argument(arg):
     return s
 
 
-import numpy as np
-
-
-def generate_pref_df(n_items=2, n_crit=len(CriterionName), n_values=len(Value)):
+def generate_pref_df(n_items=2, n_crit=len(CriterionName), n_values=len(Value), drop_prefs=True):
     # generate preferences
     df = pd.DataFrame(np.random.randint(0, n_values, size=(n_items, n_crit)))
     # shuffle agent criteria preference order
     df.columns = np.random.permutation(df.columns)
     # drop random number of preferences
-    df = df.drop(columns=np.random.choice(df.columns, size=np.random.randint(0, len(df.columns)), replace=False))
+    if drop_prefs:
+        df = df.drop(columns=np.random.choice(df.columns, size=np.random.randint(0, len(df.columns)), replace=False))
     return df
 
 
-def generate_preferences():
-    df = generate_pref_df()
+def generate_preferences(drop_prefs=True):
+    df = generate_pref_df(drop_prefs=drop_prefs)
     for i, row in df.iterrows():
         list_criteria = []
         criteria_values = []
