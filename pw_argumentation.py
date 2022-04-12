@@ -33,7 +33,7 @@ class ArgumentAgent(CommunicatingAgent):
         self.preferences = preferences
         self.logger = self._init_logger(name, log_color)
         self.done_negotiating = False
-        self.no_args_items = []  # items for which we have no arguments
+        self.no_args_items = []  # items for which we have no arguments. We never propose those items again
 
     @staticmethod
     def _init_logger(name, log_color):
@@ -236,7 +236,15 @@ class ArgumentAgent(CommunicatingAgent):
     def get_preference(self):
         return self.preferences
 
-    def generate_random_preferences(self, list_items):
+    def generate_random_preferences(self, list_items=None):
+        if list_items is None or len(list_items) == 0:
+            list_items = [
+                Item("Engine 1"),
+                Item("Engine 2"),
+                Item("Engine 3"),
+                Item("Engine 4"),
+                Item("Engine 5"),
+            ]
 
         list_criteria = [
             CriterionName.PRODUCTION_COST,
@@ -437,19 +445,13 @@ class ArgumentAgent(CommunicatingAgent):
 class ArgumentModel(Model):
     """ArgumentModel which inherit from Model."""
 
-    def __init__(self):
+    def __init__(self, agents_prefs=None):
         self.schedule = BaseScheduler(self)  # RandomActivation(self)
+        self.agents = []
 
         MessageService.clear_instance()  # clears old MessageService singleton
         self.__messages_service = MessageService(self.schedule)
 
-        list_items = [
-            Item("Engine 1"),
-            Item("Engine 2"),
-            Item("Engine 3"),
-            Item("Engine 4"),
-            Item("Engine 5"),
-        ]
         available_colors = [
             colorama.Fore.YELLOW,
             colorama.Fore.BLUE,
@@ -459,13 +461,17 @@ class ArgumentModel(Model):
             colorama.Fore.RED,
             colorama.Fore.GREEN,
         ]
-
-        self.agents = []
-        for i, agent_name in enumerate(["Bob", "Alice"]):
-            a = ArgumentAgent(i, self, agent_name, Preferences(), available_colors[i])
-            a.generate_random_preferences(list_items)
-            self.agents.append(a)
-            self.schedule.add(a)
+        if agents_prefs is None or len(agents_prefs) == 0:
+            for i, agent_name in enumerate(["Bob", "Alice"]):
+                a = ArgumentAgent(i, self, agent_name, Preferences(), available_colors[i])
+                a.generate_random_preferences()
+                self.agents.append(a)
+                self.schedule.add(a)
+        else:
+            for i, preferences in enumerate(agents_prefs):
+                a = ArgumentAgent(i, self, f"A{i+1}", preferences, available_colors[i])
+                self.agents.append(a)
+                self.schedule.add(a)
         self.running = True
         self.step_count = 0
 
@@ -502,16 +508,26 @@ class ArgumentModel(Model):
                 return results
 
 
+def format_argument(arg):
+    s = f"{'not ' if arg['decision']=='con' else ''}{arg['item']}, "
+    if arg["secondary_criterion"] is not None:
+        s += f"{arg['main_criterion'].name}=={arg['value'].name} and {arg['main_criterion'].name}>{arg['secondary_criterion'].name}"
+    else:
+        s += f"{arg['main_criterion'].name}=={arg['value'].name}"
+    return s
+
+
 if __name__ == "__main__":
     colorama.init()  # INFO: used to print colored text on Windows
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.WARNING)  # DEBUG, INFO, WARNING, ERROR
     logging.root.handlers = []
     argument_model = ArgumentModel()
     argument_model.run_model()
 
+    results = argument_model.get_final_result()
+    print("Winning agent:", results["winning_agent"])
+    print("Winning item:", results["winning_item"])
+    print("Winning argument:", format_argument(results["winning_argument"]))
+
     history = argument_model.get_message_history()
     print(history)
-    results = argument_model.get_final_result()
-    print(results)
-
-    # TODO: case where both agents have no arguments for the same item (endless loop)
