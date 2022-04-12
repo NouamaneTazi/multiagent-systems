@@ -446,11 +446,15 @@ class ArgumentModel(Model):
     """ArgumentModel which inherit from Model."""
 
     def __init__(self, agents_prefs=None):
+        global global_arguments_dict
         self.schedule = BaseScheduler(self)  # RandomActivation(self)
         self.agents = []
 
         MessageService.clear_instance()  # clears old MessageService singleton
         self.__messages_service = MessageService(self.schedule)
+
+        # clear global_arguments_dict
+        global_arguments_dict = defaultdict(list)
 
         available_colors = [
             colorama.Fore.YELLOW,
@@ -504,11 +508,29 @@ class ArgumentModel(Model):
                         "secondary_criterion": history[i - 1]["secondary_criterion"],
                     }
                     return results, pd.DataFrame(history)
-                results["winning_argument"] = "top_10_percent"
+                results["winning_argument"] = {
+                    "item": history[i - 1]["item"],
+                    "decision": "top_10_percent",
+                }
                 return results, pd.DataFrame(history)
+            elif history[i]["performative"] == MessagePerformative.REJECT:
+                results["winning_agent"] = history[i]["receiver"]
+                results["winning_item"] = None
+                if history[i - 1]["performative"] == MessagePerformative.ARGUE:
+                    results["winning_argument"] = {
+                        "item": history[i - 1]["item"],
+                        "decision": history[i - 1]["decision"],
+                        "main_criterion": history[i - 1]["main_criterion"],
+                        "value": history[i - 1]["value"],
+                        "secondary_criterion": history[i - 1]["secondary_criterion"],
+                    }
+                    return results, pd.DataFrame(history)
+        return None, pd.DataFrame(history)
 
 
 def format_argument(arg):
+    if arg["decision"] == "top_10_percent":
+        return f"{arg['item']} is among top 10% most preferred items for agent"
     s = f"{'not ' if arg['decision']=='con' else ''}{arg['item']}, "
     if arg["secondary_criterion"] is not None:
         s += f"{arg['main_criterion'].name}=={arg['value'].name} and {arg['main_criterion'].name}>{arg['secondary_criterion'].name}"
