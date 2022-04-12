@@ -71,24 +71,22 @@ class TestArgumentation(unittest.TestCase):
     def test_scenario_1(self):
         """test scenario
         A1 to A2: propose(item)
-        A2 to A1: accept (item)
+        A2 to A1: accept (item) # because top 10%
         A1 to A2: commit (item)
         A2 to A1: commit (item)
         """
         agents_prefs = []  # list of agents agents_prefs
 
         # Agent1
-        list_items = [
-            Item("item1", ""),
-            Item("item2", ""),
-        ]
+        list_items = [Item(f"item{i}", "") for i in range(1, 11)]
         list_criteria = [
             CriterionName.PRODUCTION_COST,
         ]
         criteria_values = [
             CriterionValue(list_items[0], list_criteria[0], values_list[0]),
-            CriterionValue(list_items[1], list_criteria[0], values_list[4]),
         ]
+        for i in range(1, 10):
+            criteria_values.append(CriterionValue(list_items[i], list_criteria[0], values_list[4]))
 
         agents_prefs.append(Preferences(list_criteria, criteria_values))
 
@@ -204,12 +202,30 @@ class TestArgumentation(unittest.TestCase):
 
         self.assertEqual(
             list(history.iloc[2]),
-            ["A1", "A2", MessagePerformative.ARGUE, "item1", "pro", CriterionName.PRODUCTION_COST, Value.VERY_GOOD, None]
+            [
+                "A1",
+                "A2",
+                MessagePerformative.ARGUE,
+                "item1",
+                "pro",
+                CriterionName.PRODUCTION_COST,
+                Value.VERY_GOOD,
+                None,
+            ],
         )
 
         self.assertEqual(
             list(history.iloc[3]),
-            ["A2", "A1", MessagePerformative.ARGUE, "item1", "con", CriterionName.DURABILITY, Value.VERY_BAD, CriterionName.PRODUCTION_COST]
+            [
+                "A2",
+                "A1",
+                MessagePerformative.ARGUE,
+                "item1",
+                "con",
+                CriterionName.DURABILITY,
+                Value.VERY_BAD,
+                CriterionName.PRODUCTION_COST,
+            ],
         )
 
     def test_scenario_4(self):
@@ -258,12 +274,21 @@ class TestArgumentation(unittest.TestCase):
 
         self.assertEqual(
             list(history.iloc[2]),
-            ["A1", "A2", MessagePerformative.ARGUE, "item1", "pro", CriterionName.PRODUCTION_COST, Value.GOOD, None]
+            ["A1", "A2", MessagePerformative.ARGUE, "item1", "pro", CriterionName.PRODUCTION_COST, Value.GOOD, None],
         )
 
         self.assertEqual(
             list(history.iloc[3]),
-            ["A2", "A1", MessagePerformative.ARGUE, "item2", "pro", CriterionName.PRODUCTION_COST, Value.VERY_GOOD, None]
+            [
+                "A2",
+                "A1",
+                MessagePerformative.ARGUE,
+                "item2",
+                "pro",
+                CriterionName.PRODUCTION_COST,
+                Value.VERY_GOOD,
+                None,
+            ],
         )
 
 

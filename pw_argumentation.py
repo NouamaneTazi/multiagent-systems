@@ -82,9 +82,12 @@ class ArgumentAgent(CommunicatingAgent):
                     self.logger.warning(f"Unknown message received: {message.get_performative()}")
 
     def handle_argue(self, message):
-        item = message.get_content()[0]
+        # item = message.get_content()[0]
         target_name = message.get_exp()
         argument = message.get_content()[1]
+        item = (
+            argument.get_item()
+        )  # TODO: check this: basically we completely forget about the old item when we argue for a better alternative
         counter_argument = self.get_counter_argument(argument)
         if counter_argument:
             message = Message(
@@ -203,7 +206,7 @@ class ArgumentAgent(CommunicatingAgent):
         """Accepts proposal if item is among top 10 preferred items, otherwise asks why."""
         target_name = message.get_exp()
         item = message.get_content()[0]
-        PERCENT = 50  # TODO: must be set to 10
+        PERCENT = 10
         if self.preferences.is_item_among_top_x_percent(item, PERCENT):
             message = Message(
                 self.get_name(),
@@ -506,5 +509,3 @@ if __name__ == "__main__":
     print(history)
     results = argument_model.get_final_result()
     print(results)
-
-    # TODO: investigate why we never get PROPOSE item1 ----> COMMIT item2
