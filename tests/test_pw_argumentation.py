@@ -1,62 +1,14 @@
+import logging
 import unittest
+import colorama
 
-from mesa import Model
-from mesa.time import RandomActivation, BaseScheduler
-
-from pw_argumentation import ArgumentAgent
-
-from communication.message.MessageService import MessageService
 from communication.message.MessagePerformative import MessagePerformative
-
 from communication.preferences.CriterionName import CriterionName
 from communication.preferences.CriterionValue import CriterionValue
 from communication.preferences.Item import Item
-from communication.preferences.Value import Value
 from communication.preferences.Preferences import Preferences
-
-
-import pandas as pd
-import logging
-import colorama
-
-
-class ArgumentModelTester(Model):
-    """ArgumentModel which inherit from Model."""
-
-    def __init__(self, agents_prefs):
-        self.schedule = BaseScheduler(self)  # RandomActivation(self)
-
-        MessageService.clear_instance()  # clears the MessageService singleton
-        self.__messages_service = MessageService(self.schedule)
-
-        available_colors = [
-            colorama.Fore.YELLOW,
-            colorama.Fore.BLUE,
-            colorama.Fore.MAGENTA,
-            colorama.Fore.CYAN,
-            colorama.Fore.WHITE,
-            colorama.Fore.RED,
-            colorama.Fore.GREEN,
-        ]
-
-        for i, preferences in enumerate(agents_prefs):
-            a = ArgumentAgent(i, self, f"A{i+1}", preferences, available_colors[i])
-            self.schedule.add(a)
-
-        self.running = True
-        self.step_count = 0
-
-    def step(self):
-        self.__messages_service.dispatch_messages()  # only needed if instant delivery is False
-        self.schedule.step()
-        self.step_count += 1
-        if self.step_count == 4:
-            self.running = False
-
-    def get_message_history(self):
-        history = self.__messages_service.get_message_history()
-        return pd.DataFrame(history)
-
+from communication.preferences.Value import Value
+from pw_argumentation import ArgumentModel
 
 values_list = [
     Value.VERY_GOOD,
@@ -93,7 +45,7 @@ class TestArgumentation(unittest.TestCase):
         # Agent2
         agents_prefs.append(Preferences(list_criteria, criteria_values))
 
-        argument_model = ArgumentModelTester(agents_prefs)
+        argument_model = ArgumentModel(agents_prefs)
         argument_model.step()
         argument_model.step()
         history = argument_model.get_message_history()
@@ -134,7 +86,7 @@ class TestArgumentation(unittest.TestCase):
         ]
         agents_prefs.append(Preferences(list_criteria, criteria_values))
 
-        argument_model = ArgumentModelTester(agents_prefs)
+        argument_model = ArgumentModel(agents_prefs)
         argument_model.step()
         argument_model.step()
         history = argument_model.get_message_history()
@@ -186,7 +138,7 @@ class TestArgumentation(unittest.TestCase):
         ]
         agents_prefs.append(Preferences(list_criteria, criteria_values))
 
-        argument_model = ArgumentModelTester(agents_prefs)
+        argument_model = ArgumentModel(agents_prefs)
         argument_model.step()
         argument_model.step()
         history = argument_model.get_message_history()
@@ -258,7 +210,7 @@ class TestArgumentation(unittest.TestCase):
         ]
         agents_prefs.append(Preferences(list_criteria, criteria_values))
 
-        argument_model = ArgumentModelTester(agents_prefs)
+        argument_model = ArgumentModel(agents_prefs)
         argument_model.step()
         argument_model.step()
         history = argument_model.get_message_history()
