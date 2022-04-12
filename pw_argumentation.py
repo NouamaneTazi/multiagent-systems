@@ -447,7 +447,7 @@ class ArgumentAgent(CommunicatingAgent):
 class ArgumentModel(Model):
     """ArgumentModel which inherit from Model."""
 
-    def __init__(self, agents_prefs=None):
+    def __init__(self, agents_prefs=None, agent_names=None):
         global global_arguments_dict
         self.schedule = BaseScheduler(self)  # RandomActivation(self)
         self.agents = []
@@ -479,7 +479,11 @@ class ArgumentModel(Model):
             agents_prefs = copy.deepcopy(agents_prefs)
 
             for i, preferences in enumerate(agents_prefs):
-                a = ArgumentAgent(i, self, f"A{i+1}", preferences, available_colors[i])
+                if agent_names is None or len(agent_names) == 0:
+                    agent_name = f"A{i+1}"
+                else:
+                    agent_name = agent_names[i]
+                a = ArgumentAgent(i, self, agent_name, preferences, available_colors[i])
                 self.agents.append(a)
                 self.schedule.add(a)
         self.running = True
@@ -545,7 +549,7 @@ def format_argument(arg):
     return s
 
 
-def generate_pref_df(n_items=2, n_crit=len(CriterionName), n_values=len(Value), drop_prefs=True):
+def generate_pref_df(n_items=2, n_crit=len(CriterionName), n_values=len(Value), drop_prefs=False):
     # generate preferences
     df = pd.DataFrame(np.random.randint(0, n_values, size=(n_items, n_crit)))
     # shuffle agent criteria preference order
@@ -556,16 +560,18 @@ def generate_pref_df(n_items=2, n_crit=len(CriterionName), n_values=len(Value), 
     return df
 
 
-def generate_preferences(drop_prefs=True):
-    df = generate_pref_df(drop_prefs=drop_prefs)
+def generate_preferences(n_items=2, n_crit=len(CriterionName), n_values=len(Value), drop_prefs=False):
+    df = generate_pref_df(n_items=n_items, n_crit=n_crit, n_values=n_values, drop_prefs=drop_prefs)
+    list_criteria = []
+    criteria_values = []
     for i, row in df.iterrows():
-        list_criteria = []
-        criteria_values = []
         for j, val in row.iteritems():
             list_criteria.append(CriterionName(j))
             criteria_values.append(CriterionValue(Item(f"item{i+1}"), CriterionName(j), Value(val)))
             df.rename(columns={j: CriterionName(j).name}, inplace=True)
         df.rename(index={i: Item(f"item{i+1}")}, inplace=True)
+
+    rd.shuffle(criteria_values)  # avoid order bias on items for arguments
     return Preferences(list_criteria, criteria_values), df
 
 
