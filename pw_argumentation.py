@@ -441,7 +441,7 @@ class ArgumentAgent(CommunicatingAgent):
                 arg = Argument(True, item)
                 arg.add_premise_couple_values(criterion, self.preferences.get_value(item, criterion))
                 if arg not in global_arguments_dict[item]:
-                    return arg  # argue(not oi, ci = y, y is better than x)
+                    return arg  # argue(oi, ci = y, y is better than x)
 
 
 class ArgumentModel(Model):
@@ -576,7 +576,7 @@ def generate_preferences(n_items=2, n_crit=len(CriterionName), n_values=len(Valu
 
 
 if __name__ == "__main__":
-    colorama.init()  # INFO: used to print colored text on Windows
+    colorama.init()  # used to print colored text on Windows
     logging.basicConfig(level=logging.DEBUG)  # DEBUG, INFO, WARNING, ERROR
     logging.root.handlers = []
 
